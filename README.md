@@ -35,7 +35,28 @@ Mau coba dengan data contoh? `php artisan db:seed --class=DemoSeeder` (login `de
 
 ## 🌐 Hosting
 
-### Shared hosting (cPanel / Hostinger, dll.)
+### Hostinger (subdomain, mis. finance.domainmu.com)
+
+1. hPanel → **Domains → Subdomains** → buat subdomain. Catat foldernya (mis. `public_html/finance`).
+2. hPanel → **Advanced → PHP Configuration** → pilih **PHP 8.3**.
+3. hPanel → **Advanced → SSH Access** → aktifkan, lalu login SSH.
+4. Kosongkan folder subdomain, lalu:
+   ```bash
+   cd ~/domains/domainmu.com/public_html/finance   # sesuaikan dengan folder subdomain
+   git clone https://github.com/dtaolin01/DCFinance.git .
+   composer install --no-dev --optimize-autoloader
+   ```
+5. Buat file `.env` (isi sesuai data database dari hPanel → Databases), lalu:
+   ```bash
+   php artisan migrate --force
+   php artisan config:cache && php artisan route:cache && php artisan view:cache
+   ```
+   File `.htaccess` di root repo otomatis meneruskan semua request ke folder `public/`.
+6. hPanel → **Security → SSL** → pasang SSL untuk subdomain. Buka situsnya dan daftar akun.
+
+Update berikutnya: `git pull && composer install --no-dev && php artisan migrate --force && php artisan optimize`
+
+### Shared hosting lain (cPanel, dll.)
 
 1. Buat database MySQL + user di panel hosting.
 2. Upload project (atau `git clone` via Terminal) ke folder **di luar** `public_html`, mis. `~/dcfinance`.

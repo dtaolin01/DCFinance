@@ -1,0 +1,12 @@
+# Untuk hosting yang document root-nya tidak bisa diarahkan ke folder /public
+# (mis. subdomain Hostinger): semua request diteruskan ke public/.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Jangan pernah sajikan file sensitif
+<FilesMatch "^(\.env.*|composer\.(json|lock)|artisan|phpunit\.xml)$">
+    Require all denied
+</FilesMatch>
