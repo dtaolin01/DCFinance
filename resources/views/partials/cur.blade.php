@@ -1,1 +1,1 @@
-<span class="cur cur-{{ strtolower($c) }}">{{ strtoupper($c) }}</span>
+<span class="cur {{ strtoupper($c) === 'IDR' ? 'cur-idr' : '' }}">{{ strtoupper($c) }}</span>

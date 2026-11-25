@@ -8,7 +8,7 @@
         <a href="{{ route('goals.index') }}" class="back-link">@include('partials.icon', ['n' => 'back'])Semua target</a>
         <h1>{{ $goal->emoji }} {{ $goal->name }}</h1>
         <p>
-            @if ($goal->is_shared) Target bersama @else {{ $goal->user->emoji }} Target {{ $goal->user->display_name }} @endif
+            @if ($goal->is_shared) Target bersama @else Target {{ $goal->user->display_name }} @endif
             · Prioritas {{ strtolower($goal->priorityLabel()) }}
             @if ($goal->deadline) · Tenggat {{ $goal->deadline->translatedFormat('d F Y') }} @endif
         </p>
@@ -38,11 +38,11 @@
                     @elseif ($p['on_track'] === false)
                         <span class="badge badge-amber">Perlu dikejar</span>
                     @endif
-                    <div class="big bold num mt-2" style="font-size:30px;letter-spacing:-.02em">{{ money($p['saved'], $cur) }}</div>
+                    <div class="bold num mt-2" style="font-size:28px;letter-spacing:-.02em">{{ money($p['saved'], $cur) }}</div>
                     <div class="muted num">dari {{ money($p['target'], $cur) }}
-                        @if ($cur === 'AUD') <span class="small">(≈ {{ rupiah($p['target'] * $rate['rate']) }})</span>@endif
+                        @if ($cur !== 'IDR') <span class="small">(≈ {{ rupiah($p['target_idr']) }})</span>@endif
                     </div>
-                    <div class="bar bar-lg mt-2"><span data-w="{{ round($p['percent'], 1) }}" style="width:0;background:linear-gradient(90deg, {{ $goal->color }}99, {{ $goal->color }})"></span></div>
+                    <div class="bar bar-lg mt-2"><span data-w="{{ round($p['percent'], 1) }}" style="width:0;background: {{ $goal->color }}"></span></div>
                     <div class="row-between small mt-1"><span class="muted">Sisa</span><span class="bold num">{{ money($p['remaining'], $cur) }}</span></div>
                 </div>
             </div>
@@ -61,7 +61,7 @@
                 <div class="card card-tight">
                     <div class="stat-k">Per minggu</div>
                     <div class="stat-v num">{{ $p['per_week'] ? money($p['per_week'], $cur) : '—' }}</div>
-                    <div class="stat-s">{{ $p['days_left'] !== null && $p['days_left'] >= 0 ? $p['days_left'].' hari lagi' : 'atur tenggat untuk rencana' }}</div>
+                    <div class="stat-s">{{ $p['days_left'] !== null && $p['days_left'] >= 0 ? $p['days_left'].' hari lagi' : 'atur tenggat dulu' }}</div>
                 </div>
                 <div class="card card-tight">
                     <div class="stat-k">Per hari</div>
@@ -76,21 +76,17 @@
             @forelse ($history as $t)
                 @include('partials.tx-item', ['t' => $t, 'showDate' => true, 'showUser' => $goal->is_shared, 'actions' => true, 'hideGoal' => true])
             @empty
-                <div class="empty">
-                    <div class="ill">🪙</div>
-                    <h4>Belum ada tabungan untuk target ini</h4>
-                    <p>Saat mencatat setoran, pilih target ini di kolom “Untuk target”.</p>
-                </div>
+                @include('partials.empty', ['icon' => 'coins', 'title' => 'Belum ada tabungan untuk target ini', 'text' => 'Saat mencatat setoran, pilih target ini di kolom “Untuk target”.'])
             @endforelse
         </div>
     </div>
 
     <div class="stack">
-        <div class="card card-pink">
+        <div class="card card-soft">
             <div class="card-head"><h3>@include('partials.tile', ['n' => 'clock']) Perkiraan</h3></div>
             <div class="kv"><span class="k">Kecepatan 3 bulan terakhir</span><span class="v num">{{ money(max($p['pace_per_month'], 0), $cur) }}/bln</span></div>
             <div class="kv"><span class="k">Perkiraan tercapai</span><span class="v">
-                @if ($p['done']) Sudah 🎉
+                @if ($p['done']) Sudah tercapai
                 @elseif ($p['eta']) {{ $p['eta']->translatedFormat('M Y') }}
                 @else <span class="muted">belum bisa diperkirakan</span> @endif
             </span></div>
@@ -98,29 +94,36 @@
                 <div class="kv"><span class="k">Tenggat</span><span class="v">{{ $goal->deadline->translatedFormat('d M Y') }}</span></div>
             @endif
             @if (! $p['done'] && $p['eta'] && $goal->deadline && $p['eta']->gt($goal->deadline))
-                <div class="alert alert-amber small mt-2">Dengan kecepatan sekarang, target ini telat ±{{ (int) round($goal->deadline->diffInDays($p['eta']) / 30.4375) ?: 1 }} bulan. Naikkan setoran ke {{ money($p['per_month'], $cur) }}/bulan ya!</div>
+                <div class="alert alert-amber mt-3">Dengan kecepatan sekarang, target ini telat ±{{ (int) round($goal->deadline->diffInDays($p['eta']) / 30.4375) ?: 1 }} bulan. Naikkan setoran ke {{ money($p['per_month'], $cur) }}/bulan ya!</div>
             @endif
         </div>
 
         <div class="card">
             <div class="card-head"><h3>@include('partials.tile', ['n' => 'wallet']) Isi celengan</h3></div>
-            <div class="kv"><span class="k">@include('partials.cur', ['c' => 'IDR']) Rupiah</span><span class="v num">{{ rupiah($p['idr_part']) }}</span></div>
-            <div class="kv"><span class="k">@include('partials.cur', ['c' => 'AUD']) AUD</span><span class="v num">{{ aud($p['aud_part']) }}</span></div>
-            <div class="kv"><span class="k">Total dirupiahkan</span><span class="v num">{{ rupiah($p['saved_idr']) }}</span></div>
-            <div class="xs muted mt-1">AUD dinilai dengan kurs hari ini (Rp {{ rate_fmt($rate['rate']) }}).</div>
+            @forelse ($p['parts'] as $code => $amt)
+                <div class="kv"><span class="k">@include('partials.cur', ['c' => $code]) {{ \App\Support\Currency::name($code) }}</span><span class="v num">{{ money($amt, $code) }}</span></div>
+            @empty
+                <p class="small muted">Masih kosong.</p>
+            @endforelse
+            @if (count($p['parts']))
+                <div class="kv"><span class="k bold" style="color:var(--ink)">Total dirupiahkan</span><span class="v num">{{ rupiah($p['saved_idr']) }}</span></div>
+                <div class="hint">Valas dinilai dengan kurs hari ini.</div>
+            @endif
         </div>
 
         @if ($goal->is_shared && count($p['by_user']))
             <div class="card">
                 <div class="card-head"><h3>@include('partials.tile', ['n' => 'users', 'tone' => 'violet']) Kontribusi</h3></div>
                 @php $sum = max(array_sum(array_map(fn ($v) => max($v, 0), $p['by_user'])), 1); @endphp
-                @foreach ($people as $person)
-                    @php $v = $p['by_user'][$person->id] ?? 0; @endphp
-                    <div class="mt-2">
-                        <div class="row-between small"><span class="bold">{{ $person->emoji }} {{ $person->display_name }}</span><span class="num">{{ rupiah($v) }}</span></div>
-                        <div class="bar mt-1"><span data-w="{{ round(max($v, 0) / $sum * 100) }}" style="width:0;background: {{ $person->color }}"></span></div>
-                    </div>
-                @endforeach
+                <div class="stack" style="gap:14px">
+                    @foreach ($people as $person)
+                        @php $v = $p['by_user'][$person->id] ?? 0; @endphp
+                        <div>
+                            <div class="row-between small"><span class="bold">{{ $person->emoji }} {{ $person->display_name }}</span><span class="num">{{ rupiah($v) }}</span></div>
+                            <div class="bar mt-1"><span data-w="{{ round(max($v, 0) / $sum * 100) }}" style="width:0;background: {{ $person->color }}"></span></div>
+                        </div>
+                    @endforeach
+                </div>
             </div>
         @endif
     </div>

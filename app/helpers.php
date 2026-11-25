@@ -23,10 +23,18 @@ if (! function_exists('aud')) {
 }
 
 if (! function_exists('money')) {
-    /** Format sesuai mata uang (IDR / AUD). */
+    /** Format sesuai mata uang: Rp 1.250.000 · US$ 1.250,50 · ¥ 12.000 */
     function money(float|int|string|null $value, string $currency = 'IDR', bool $signed = false): string
     {
-        return strtoupper($currency) === 'AUD' ? aud($value, $signed) : rupiah($value, $signed);
+        $currency = strtoupper($currency);
+        if ($currency === 'IDR') {
+            return rupiah($value, $signed);
+        }
+        $value = (float) $value;
+        $sign = $value < 0 ? '-' : ($signed && $value > 0 ? '+' : '');
+        $dec = \App\Support\Currency::decimals($currency);
+
+        return $sign.\App\Support\Currency::symbol($currency).' '.number_format(abs($value), $dec, ',', '.');
     }
 }
 
@@ -48,10 +56,19 @@ if (! function_exists('rupiah_short')) {
 }
 
 if (! function_exists('rate_fmt')) {
-    /** Format kurs: 10.512,35 */
+    /** Format kurs (Rupiah per 1 unit). Kurs kecil (mis. VND) ditampilkan lebih banyak desimal. */
     function rate_fmt(float|int|string|null $value): string
     {
-        return number_format((float) $value, 2, ',', '.');
+        $v = (float) $value;
+        $dec = match (true) {
+            $v == 0.0 => 2,
+            $v < 0.01 => 6,
+            $v < 1 => 4,
+            $v < 100 => 3,
+            default => 2,
+        };
+
+        return number_format($v, $dec, ',', '.');
     }
 }
 
@@ -83,13 +100,15 @@ if (! function_exists('parse_amount')) {
                 $s = str_replace(',', '', $s);
             }
         } elseif ($lastComma !== false) {
-            // Hanya koma: desimal bila 1-2 digit di belakang, selain itu pemisah ribuan
-            $s = (strlen($s) - $lastComma - 1) <= 2 && substr_count($s, ',') === 1
-                ? str_replace(',', '.', $s)
-                : str_replace(',', '', $s);
+            // Hanya satu koma: desimal, kecuali tepat 3 digit di belakang (pemisah ribuan gaya Inggris)
+            $after = strlen($s) - $lastComma - 1;
+            $intPart = ltrim(substr($s, 0, $lastComma), '-');
+            $isDecimal = substr_count($s, ',') === 1 && ($after !== 3 || $intPart === '0' || $intPart === '');
+            $s = $isDecimal ? str_replace(',', '.', $s) : str_replace(',', '', $s);
         } elseif ($lastDot !== false) {
             // Hanya titik: pemisah ribuan bila tepat 3 digit di belakang atau lebih dari satu titik
-            if (substr_count($s, '.') > 1 || (strlen($s) - $lastDot - 1) === 3) {
+            $intPart = ltrim(substr($s, 0, $lastDot), '-');
+            if (substr_count($s, '.') > 1 || ((strlen($s) - $lastDot - 1) === 3 && $intPart !== '0' && $intPart !== '')) {
                 $s = str_replace('.', '', $s);
             }
         }

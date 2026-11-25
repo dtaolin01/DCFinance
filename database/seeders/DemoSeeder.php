@@ -24,8 +24,14 @@ class DemoSeeder extends Seeder
         ]);
         $b = User::updateOrCreate(['email' => 'demo2@dcfinance.test'], [
             'name' => 'Clara Anindya', 'nickname' => 'Clara', 'password' => 'password',
-            'color' => '#a855f7', 'emoji' => '🌸', 'monthly_target' => 2500000,
+            'color' => '#a855f7', 'emoji' => '🌸', 'monthly_target' => 2500000, 'theme' => 'black',
         ]);
+        $a->forceFill(['is_admin' => true, 'approved_at' => now()])->save();
+        $b->forceFill(['approved_at' => now()])->save();
+        $c = User::updateOrCreate(['email' => 'demo3@dcfinance.test'], [
+            'name' => 'Calon Akun Baru', 'password' => 'password', 'color' => '#14b8a6', 'emoji' => '🦊',
+        ]);
+        $c->forceFill(['approved_at' => null, 'is_admin' => false])->save();
 
         $trip = Goal::create([
             'user_id' => $a->id, 'is_shared' => true, 'name' => 'Liburan ke Sydney', 'emoji' => '🐨', 'color' => '#ec4899',
@@ -56,6 +62,11 @@ class DemoSeeder extends Seeder
                 $this->tx($a, 'withdraw', 'IDR', 600000, 1, $d->copy()->addDays(12), 'ewallet', 'Darurat servis motor');
             }
         }
+
+        // Valas lain
+        $this->tx($a, 'deposit', 'USD', 120, 16450, today()->subDays(40), 'cash', 'Sisa jalan-jalan', $trip->id);
+        $this->tx($a, 'deposit', 'JPY', 15000, 108, today()->subDays(25), 'cash', 'Oleh-oleh yen');
+        $this->tx($b, 'deposit', 'SGD', 50, 12650, today()->subDays(15), 'cash', 'Angpau SGD');
 
         // Tukar Rupiah -> AUD cash
         $g = (string) Str::uuid();

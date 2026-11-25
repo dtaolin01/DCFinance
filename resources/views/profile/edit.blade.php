@@ -1,18 +1,37 @@
 @extends('layouts.app')
-@section('title', 'Profil')
+@section('title', 'Profil & Tema')
 
 @section('content')
 <div class="page-head">
     <div>
-        <h1>Profil</h1>
-        <p>Atur nama, warna, dan target menabung bulananmu.</p>
+        <h1>Profil & tema</h1>
+        <p>Atur nama, warna tampilan, dan target menabung bulananmu.</p>
     </div>
 </div>
 
-<div class="grid g-2">
+<div class="grid g-main">
     <form method="POST" action="{{ route('profile.update') }}" class="card form">
         @csrf @method('PUT')
-        <div class="grid g-2" style="gap:12px">
+
+        <div class="field">
+            <span class="label">Tema warna web</span>
+            <div class="themes">
+                @foreach (config('themes') as $key => $t)
+                    <label>
+                        <input type="radio" name="theme" value="{{ $key }}" @checked(old('theme', $user->themeKey()) === $key) data-theme-pick='@json($t['vars'])'>
+                        <span class="theme-opt">
+                            <span class="sw"><i style="background: {{ $t['vars']['acc-500'] }}"></i><i style="background: {{ $t['vars']['acc-200'] }}"></i><i style="background: #fff"></i></span>
+                            <b>{{ $t['label'] }}</b>
+                        </span>
+                    </label>
+                @endforeach
+            </div>
+            <div class="hint">Klik untuk melihat pratinjau, lalu Simpan. Tema hanya berlaku untuk akunmu — pasanganmu bisa memilih tema sendiri.</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="grid g-2" style="gap:14px">
             <div class="field">
                 <label for="name">Nama lengkap</label>
                 <input id="name" name="name" class="input @error('name') is-invalid @enderror" value="{{ old('name', $user->name) }}" required>
@@ -37,13 +56,13 @@
             </div>
         </div>
         <div class="field">
-            <span class="label">Warna kamu</span>
+            <span class="label">Warna penanda kamu</span>
             <div class="pick swatch">
                 @foreach (config('dcfinance.colors') as $c)
                     <label><input type="radio" name="color" value="{{ $c }}" @checked(old('color', $user->color) === $c)><span style="background: {{ $c }}"></span></label>
                 @endforeach
             </div>
-            <div class="hint">Dipakai untuk membedakan kamu dan pasangan di halaman Kita Berdua.</div>
+            <div class="hint">Membedakan kamu dan pasangan di halaman Kita Berdua dan target bersama.</div>
         </div>
         <div class="field">
             <label for="monthly_target">Target menabung per bulan</label>
@@ -52,10 +71,10 @@
             </div>
             <div class="hint">Kosongkan / 0 jika tidak ingin memakai target bulanan.</div>
         </div>
-        <button class="btn btn-primary btn-block">Simpan profil</button>
+        <button class="btn btn-primary btn-lg btn-block">Simpan profil & tema</button>
     </form>
 
-    <form method="POST" action="{{ route('profile.password') }}" class="card form" style="align-self:start">
+    <form method="POST" action="{{ route('profile.password') }}" class="card form">
         @csrf @method('PUT')
         <div class="card-head" style="margin-bottom:0"><h3>@include('partials.tile', ['n' => 'lock']) Ganti kata sandi</h3></div>
         <div class="field">

@@ -28,9 +28,10 @@
             <option value="exchange" @selected($filters['type'] === 'exchange')>Tukar uang</option>
         </select>
         <select name="currency" class="input" onchange="this.form.submit()">
-            <option value="">IDR & AUD</option>
-            <option value="IDR" @selected($filters['currency'] === 'IDR')>IDR</option>
-            <option value="AUD" @selected($filters['currency'] === 'AUD')>AUD</option>
+            <option value="">Semua mata uang</option>
+            @foreach ($usedCurrencies as $c)
+                <option value="{{ $c }}" @selected($filters['currency'] === $c)>{{ $c }}</option>
+            @endforeach
         </select>
         <input type="search" name="q" value="{{ $filters['search'] }}" class="input grow" placeholder="Cari catatan…">
         <button class="btn btn-soft">@include('partials.icon', ['n' => 'search']) Cari</button>
@@ -48,11 +49,7 @@
 
 <div class="card">
     @if ($transactions->isEmpty())
-        <div class="empty">
-            <div class="ill">🔎</div>
-            <h4>Tidak ada transaksi</h4>
-            <p>Coba ubah filter, atau catat transaksi baru.</p>
-        </div>
+        @include('partials.empty', ['icon' => 'search', 'title' => 'Tidak ada transaksi', 'text' => 'Coba ubah filter, atau catat transaksi baru.'])
     @else
         @foreach ($grouped as $day => $items)
             @php

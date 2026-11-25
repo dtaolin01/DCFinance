@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Transaction;
 use App\Services\ExchangeRateService;
 use App\Services\SavingsCalculator;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -19,7 +20,7 @@ class TransactionController extends Controller
         $user = $request->user();
         $month = $request->input('month');
         $type = $request->input('type');
-        $currency = $request->input('currency');
+        $currency = strtoupper((string) $request->input('currency'));
         $search = trim((string) $request->input('q'));
 
         $query = $user->transactions()->with('goal')
@@ -30,7 +31,7 @@ class TransactionController extends Controller
             ->when($type === 'in', fn ($q) => $q->where('type', Transaction::DEPOSIT))
             ->when($type === 'out', fn ($q) => $q->where('type', Transaction::WITHDRAW))
             ->when($type === 'exchange', fn ($q) => $q->whereIn('type', [Transaction::EXCHANGE_IN, Transaction::EXCHANGE_OUT]))
-            ->when(in_array($currency, ['IDR', 'AUD'], true), fn ($q) => $q->where('currency', $currency))
+            ->when(Currency::exists($currency), fn ($q) => $q->where('currency', $currency))
             ->when($search !== '', fn ($q) => $q->where('note', 'like', "%{$search}%"));
 
         $totals = (clone $query)->get();
@@ -45,18 +46,20 @@ class TransactionController extends Controller
             'totalIn' => $totals->where('type', Transaction::DEPOSIT)->sum('amount_idr'),
             'totalOut' => $totals->where('type', Transaction::WITHDRAW)->sum('amount_idr'),
             'months' => $months,
-            'filters' => compact('month', 'type', 'currency', 'search'),
+            'usedCurrencies' => $this->calc->usedCurrencies($user),
+            'filters' => ['month' => $month, 'type' => $type, 'currency' => Currency::exists($currency) ? $currency : null, 'search' => $search],
         ]);
     }
 
     public function create(Request $request)
     {
+        $cur = strtoupper((string) $request->input('currency', 'IDR'));
         $tx = new Transaction([
             'type' => $request->input('type') === 'withdraw' ? Transaction::WITHDRAW : Transaction::DEPOSIT,
-            'currency' => $request->input('currency') === 'AUD' ? 'AUD' : 'IDR',
+            'currency' => Currency::exists($cur) ? $cur : 'IDR',
             'goal_id' => $request->input('goal'),
             'date' => today(),
-            'method' => $request->input('currency') === 'AUD' ? 'cash' : 'bank',
+            'method' => $cur !== 'IDR' && Currency::exists($cur) ? 'cash' : 'bank',
         ]);
 
         return $this->form($request, $tx);
@@ -67,15 +70,17 @@ class TransactionController extends Controller
         $data = $this->validated($request);
         $tx = $request->user()->transactions()->create($data);
 
-        return redirect()->route($request->input('redirect') === 'goal' && $tx->goal_id ? 'goals.show' : 'dashboard', $tx->goal_id ? ['goal' => $tx->goal_id] : [])
-            ->with('success', ($tx->type === Transaction::DEPOSIT ? 'Setoran ' : 'Penarikan ').money($tx->amount, $tx->currency).' tersimpan 💖');
+        $toGoal = $request->input('redirect') === 'goal' && $tx->goal_id;
+
+        return redirect()->route($toGoal ? 'goals.show' : 'dashboard', $toGoal ? ['goal' => $tx->goal_id] : [])
+            ->with('success', ($tx->type === Transaction::DEPOSIT ? 'Setoran ' : 'Penarikan ').money($tx->amount, $tx->currency).' tersimpan.');
     }
 
     public function edit(Request $request, Transaction $transaction)
     {
         $this->authorizeOwner($request, $transaction);
         if ($transaction->isExchange()) {
-            return redirect()->route('transactions.index')->with('error', 'Transaksi tukar mata uang tidak bisa diedit. Hapus lalu buat ulang ya.');
+            return redirect()->route('transactions.index')->with('error', 'Transaksi tukar uang tidak bisa diedit. Hapus lalu buat ulang ya.');
         }
 
         return $this->form($request, $transaction);
@@ -88,7 +93,7 @@ class TransactionController extends Controller
 
         $transaction->update($this->validated($request, $transaction));
 
-        return redirect()->route('transactions.index')->with('success', 'Transaksi diperbarui ✨');
+        return redirect()->route('transactions.index')->with('success', 'Transaksi diperbarui.');
     }
 
     public function destroy(Request $request, Transaction $transaction)
@@ -107,13 +112,16 @@ class TransactionController extends Controller
     private function form(Request $request, Transaction $tx)
     {
         $user = $request->user();
-        $balances = $this->calc->balances($this->calc->transactions($user));
+        $used = $this->calc->usedCurrencies($user);
 
         return view('transactions.form', [
             'tx' => $tx,
-            'rate' => $this->rates->current(),
+            'currencies' => Currency::grouped($used),
+            'quick' => array_slice(array_values(array_unique(array_merge(['IDR'], $used, ['AUD', 'USD', 'SGD']))), 0, 6),
+            'rates' => $this->rates->all(),
+            'curMeta' => Currency::forJs(),
             'goals' => $user->visibleGoals()->where(fn ($q) => $q->whereNull('achieved_at')->orWhere('id', $tx->goal_id))->orderBy('name')->get(),
-            'balances' => $balances,
+            'balances' => $this->calc->balances($this->calc->transactions($user)),
         ]);
     }
 
@@ -121,15 +129,16 @@ class TransactionController extends Controller
     {
         $user = $request->user();
         $request->merge([
+            'currency' => strtoupper((string) $request->input('currency')),
             'amount' => parse_amount($request->input('amount')),
             'rate' => parse_amount($request->input('rate')),
         ]);
 
         $data = $request->validate([
             'type' => ['required', Rule::in([Transaction::DEPOSIT, Transaction::WITHDRAW])],
-            'currency' => ['required', Rule::in(['IDR', 'AUD'])],
+            'currency' => ['required', Rule::in(Currency::codes())],
             'amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
-            'rate' => ['nullable', 'numeric', 'gt:0', 'max:1000000', Rule::requiredIf($request->input('currency') === 'AUD')],
+            'rate' => ['nullable', 'numeric', 'gt:0', 'max:100000000', Rule::requiredIf($request->input('currency') !== 'IDR')],
             'date' => ['required', 'date', 'before_or_equal:'.today()->addDay()->toDateString()],
             'method' => ['required', Rule::in(array_keys(config('dcfinance.methods')))],
             'goal_id' => ['nullable', 'integer'],
@@ -137,7 +146,7 @@ class TransactionController extends Controller
         ], [
             'amount.required' => 'Nominal wajib diisi.',
             'amount.gt' => 'Nominal harus lebih dari 0.',
-            'rate.required' => 'Kurs wajib diisi untuk AUD.',
+            'rate.required' => 'Kurs wajib diisi untuk mata uang selain Rupiah.',
             'date.before_or_equal' => 'Tanggal tidak boleh di masa depan.',
         ]);
 
@@ -145,17 +154,21 @@ class TransactionController extends Controller
             throw ValidationException::withMessages(['goal_id' => 'Target tidak ditemukan.']);
         }
 
-        $data['rate'] = $data['currency'] === 'IDR' ? 1 : round((float) $data['rate'], 4);
-        $data['amount'] = $data['currency'] === 'IDR' ? round($data['amount']) : round($data['amount'], 2);
+        $cur = $data['currency'];
+        $data['rate'] = $cur === 'IDR' ? 1 : round((float) $data['rate'], 8);
+        $data['amount'] = round($data['amount'], Currency::decimals($cur));
+        if ($data['amount'] <= 0) {
+            throw ValidationException::withMessages(['amount' => 'Nominal terlalu kecil.']);
+        }
         $data['amount_idr'] = round($data['amount'] * $data['rate'], 2);
         $data['goal_id'] = ($data['goal_id'] ?? null) ?: null;
 
         if ($data['type'] === Transaction::WITHDRAW) {
             $txs = $this->calc->transactions($user)->when($existing, fn ($c) => $c->where('id', '!=', $existing->id));
-            $available = $this->calc->balances($txs)[$data['currency']] ?? 0;
+            $available = $this->calc->balances($txs)[$cur] ?? 0;
             if ($data['amount'] > $available + 0.001) {
                 throw ValidationException::withMessages([
-                    'amount' => 'Saldo '.$data['currency'].' tidak cukup. Saldo tersedia: '.money($available, $data['currency']).'.',
+                    'amount' => 'Saldo '.$cur.' tidak cukup. Saldo tersedia: '.money($available, $cur).'.',
                 ]);
             }
         }

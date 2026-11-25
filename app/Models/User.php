@@ -21,6 +21,7 @@ class User extends Authenticatable
         'nickname',
         'color',
         'emoji',
+        'theme',
         'monthly_target',
         'email',
         'password',
@@ -37,6 +38,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'monthly_target' => 'integer',
+            'is_admin' => 'boolean',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -56,10 +59,25 @@ class User extends Authenticatable
         return $this->nickname ?: strtok($this->name, ' ');
     }
 
-    /** Pasangan = akun lain di aplikasi ini. */
+    public function isApproved(): bool
+    {
+        return $this->approved_at !== null;
+    }
+
+    public function scopeApproved($q)
+    {
+        return $q->whereNotNull('approved_at');
+    }
+
+    public function scopePending($q)
+    {
+        return $q->whereNull('approved_at');
+    }
+
+    /** Pasangan = akun aktif lain di aplikasi ini. */
     public function partner(): ?User
     {
-        return static::where('id', '!=', $this->id)->orderBy('id')->first();
+        return static::approved()->where('id', '!=', $this->id)->orderBy('id')->first();
     }
 
     /** Target yang bisa dilihat user: miliknya + semua target bersama. */
@@ -68,8 +86,16 @@ class User extends Authenticatable
         return Goal::query()->where(fn ($q) => $q->where('user_id', $this->id)->orWhere('is_shared', true));
     }
 
+    /** Tema warna aktif (pink bila belum dipilih / tidak dikenal). */
+    public function themeKey(): string
+    {
+        return array_key_exists($this->theme, config('themes', [])) ? $this->theme : 'pink';
+    }
+
+    /** Pendaftaran dibuka selama akun aktif belum penuh (maks. 10 antrian persetujuan). */
     public static function registrationOpen(): bool
     {
-        return static::count() < config('dcfinance.max_users', 2);
+        return static::approved()->count() < config('dcfinance.max_users', 2)
+            && static::pending()->count() < 10;
     }
 }

@@ -15,7 +15,7 @@
     </div>
     <div class="tx-amt num {{ $cls === 'in' ? 'text-green' : ($cls === 'out' ? 'text-red' : '') }}">
         {{ $t->isInflow() ? '+' : '−' }}{{ ltrim(money($t->amount, $t->currency), '-') }}
-        @if ($t->currency === 'AUD')<span class="s">≈ {{ rupiah($t->amount_idr) }} · kurs {{ rate_fmt($t->rate) }}</span>@endif
+        @if ($t->currency !== 'IDR')<span class="s">≈ {{ rupiah($t->amount_idr) }} · kurs {{ rate_fmt($t->rate) }}</span>@endif
     </div>
     @if (! empty($actions) && $t->user_id === auth()->id())
         <div class="tx-actions">

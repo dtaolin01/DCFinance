@@ -13,9 +13,11 @@ class DashboardController extends Controller
         $txs = $calc->transactions($user);
         $summary = $calc->summary($user, $txs);
 
-        $goals = $user->visibleGoals()->with('transactions')->whereNull('achieved_at')
+        $goals = $user->visibleGoals()->with('transactions')
             ->orderBy('priority')->orderByRaw('deadline is null')->orderBy('deadline')->get()
-            ->each(fn ($g) => $g->progress_cache = $g->progress($summary['rate']));
+            ->each(fn ($g) => $g->progress_cache = $g->progress());
+        \App\Models\Goal::syncAchieved($goals);
+        $goals = $goals->whereNull('achieved_at')->values();
 
         return view('dashboard.index', [
             'user' => $user,

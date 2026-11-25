@@ -15,15 +15,15 @@
 <div class="auth-wrap">
     <section class="auth-art">
         <div class="brand" style="color:#fff;padding:0">
-            <div class="brand-logo" style="background:#fff;color:var(--pink-600)">DC</div>
+            <div class="brand-logo" style="background:#fff;color:var(--acc-600)">DC</div>
             <div class="brand-name" style="color:#fff">DCFinance</div>
         </div>
         <div>
             <h2>Tabungan kita, mimpi kita. 💗</h2>
-            <p>Catat tabungan masing-masing, simpan Rupiah & AUD cash, dan kejar target bareng-bareng.</p>
+            <p>Catat tabungan masing-masing dalam Rupiah atau mata uang apa pun, lalu kejar target bareng-bareng.</p>
             <div class="floaty">
                 <div>Rupiah</div>
-                <div>AUD cash</div>
+                <div>150+ mata uang</div>
                 <div>Target</div>
                 <div>Berdua</div>
             </div>

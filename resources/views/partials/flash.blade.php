@@ -1,7 +1,7 @@
 @if (session('success'))
-    <div class="toast" role="status">✅ {{ session('success') }} <button type="button" aria-label="Tutup">×</button></div>
+    <div class="toast" role="status">@include('partials.tile', ['n' => 'check', 'tone' => 'green']) <span>{{ session('success') }}</span> <button type="button" aria-label="Tutup">×</button></div>
 @elseif (session('error'))
-    <div class="toast error" role="alert">⚠️ {{ session('error') }} <button type="button" aria-label="Tutup">×</button></div>
+    <div class="toast" role="alert">@include('partials.tile', ['n' => 'alert', 'tone' => 'red']) <span>{{ session('error') }}</span> <button type="button" aria-label="Tutup">×</button></div>
 @elseif ($errors->any())
-    <div class="toast error" role="alert">⚠️ Ada isian yang perlu dicek lagi. <button type="button" aria-label="Tutup">×</button></div>
+    <div class="toast" role="alert">@include('partials.tile', ['n' => 'alert', 'tone' => 'red']) <span>Ada isian yang perlu dicek lagi.</span> <button type="button" aria-label="Tutup">×</button></div>
 @endif

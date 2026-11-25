@@ -2,12 +2,26 @@
 (function () {
     'use strict';
 
-    const idr = (v) => 'Rp ' + Math.round(v).toLocaleString('id-ID');
-    const aud = (v) => 'A$ ' + Number(v).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const rateFmt = (v) => Number(v).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    window.DC = { idr, aud, rateFmt };
+    const DATA = window.DC_DATA || {};
+    const RATES = DATA.rates || {};
+    const META = DATA.cur || {};
 
-    /** "1.500.000" / "150,75" -> angka */
+    const meta = (c) => META[c] || [c, 2, c];
+    const dec = (c) => (c === 'IDR' ? 0 : meta(c)[1]);
+    const sym = (c) => (c === 'IDR' ? 'Rp' : meta(c)[0]);
+    const rateOf = (c) => (c === 'IDR' ? 1 : Number(RATES[c] || 0));
+
+    const fmtNum = (v, d) => Number(v).toLocaleString('id-ID', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const money = (v, c = 'IDR') => (v < 0 ? '-' : '') + sym(c) + ' ' + fmtNum(Math.abs(v), dec(c));
+    const idr = (v) => money(v, 'IDR');
+    const rateFmt = (v) => {
+        v = Number(v);
+        const d = v === 0 ? 2 : v < 0.01 ? 6 : v < 1 ? 4 : v < 100 ? 3 : 2;
+        return fmtNum(v, d);
+    };
+    const cssVar = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+    /** "1.500.000" / "150,75" / "0,000400" -> angka */
     function parse(str) {
         if (str == null) return NaN;
         let s = String(str).replace(/[^\d.,]/g, '');
@@ -16,105 +30,121 @@
         if (lastDot > -1 && lastComma > -1) {
             s = lastComma > lastDot ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
         } else if (lastComma > -1) {
-            s = (s.length - lastComma - 1) <= 2 && s.split(',').length === 2 ? s.replace(',', '.') : s.replace(/,/g, '');
+            const after = s.length - lastComma - 1, intPart = s.slice(0, lastComma);
+            s = (s.split(',').length === 2 && (after !== 3 || intPart === '0' || intPart === '')) ? s.replace(',', '.') : s.replace(/,/g, '');
         } else if (lastDot > -1) {
-            if (s.split('.').length > 2 || s.length - lastDot - 1 === 3) s = s.replace(/\./g, '');
+            const after = s.length - lastDot - 1, intPart = s.slice(0, lastDot);
+            if (s.split('.').length > 2 || (after === 3 && intPart !== '0' && intPart !== '')) s = s.replace(/\./g, '');
         }
         return parseFloat(s);
     }
-    window.DC.parse = parse;
+    /** angka -> teks input gaya Indonesia */
+    const toInput = (v, d) => (isFinite(v) && v > 0 ? Number(v).toLocaleString('id-ID', { maximumFractionDigits: d, useGrouping: true }) : '');
 
-    /** Format saat mengetik: titik ribuan, koma desimal (maks 2) bila diizinkan */
-    function formatTyping(input, allowDecimal) {
+    window.DC = { idr, money, rateFmt, parse, sym, dec, rateOf, cssVar };
+
+    /** Format saat mengetik: titik ribuan, koma desimal */
+    function formatTyping(input, maxDec) {
         const raw = input.value;
         const caretFromEnd = raw.length - (input.selectionStart ?? raw.length);
-        let clean = raw.replace(/[^\d,]/g, '');
+        const clean = raw.replace(/[^\d,]/g, '');
         let [intPart, decPart] = clean.split(',');
         intPart = (intPart || '').replace(/^0+(?=\d)/, '');
         let out = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-        if (allowDecimal && clean.includes(',')) out += ',' + (decPart || '').slice(0, 2);
+        if (maxDec > 0 && clean.includes(',')) out += ',' + (decPart || '').slice(0, maxDec);
         input.value = out;
         const pos = Math.max(out.length - caretFromEnd, 0);
         try { input.setSelectionRange(pos, pos); } catch (e) { /* noop */ }
     }
-
     function currencyOf(input) {
         if (input.dataset.currencyFrom) {
-            const checked = document.querySelector(`input[name="${input.dataset.currencyFrom}"]:checked`);
-            if (checked) return checked.value === 'AUD_IDR' ? 'AUD' : (checked.value === 'IDR_AUD' ? 'IDR' : checked.value);
+            const el = document.querySelector(`[name="${input.dataset.currencyFrom}"]`);
+            if (el) return el.value;
         }
         return input.dataset.currency || 'IDR';
     }
-
-    function bindMoney(input) {
+    document.querySelectorAll('[data-money]').forEach((input) => {
         input.addEventListener('input', () => {
-            formatTyping(input, input.dataset.decimal === 'always' || currencyOf(input) === 'AUD');
+            const maxDec = input.dataset.decimal === 'rate' ? 8 : dec(currencyOf(input));
+            formatTyping(input, maxDec);
             input.dispatchEvent(new CustomEvent('money:change', { bubbles: true }));
         });
-    }
-    document.querySelectorAll('[data-money]').forEach(bindMoney);
+    });
 
     // ---------- Form transaksi ----------
     const txForm = document.querySelector('[data-tx-form]');
     if (txForm) {
+        const cur = txForm.querySelector('[name="currency"]');
         const amount = txForm.querySelector('[name="amount"]');
         const rate = txForm.querySelector('[name="rate"]');
         const rateWrap = txForm.querySelector('[data-rate-wrap]');
+        const rateLabel = txForm.querySelector('[data-rate-label]');
+        const rateHint = txForm.querySelector('[data-rate-hint]');
         const prefix = txForm.querySelector('[data-prefix]');
         const preview = txForm.querySelector('[data-preview]');
         const previewWrap = txForm.querySelector('[data-preview-wrap]');
         const balanceHint = txForm.querySelector('[data-balance]');
         const typeHint = txForm.querySelector('[data-type-hint]');
-        const method = txForm.querySelector('[name="method"]');
+        const curName = txForm.querySelector('[data-cur-name]');
         const balances = JSON.parse(txForm.dataset.balances || '{}');
+        let rateTouched = !!txForm.dataset.editing;
+        let lastCur = cur.value;
 
         const sync = () => {
-            const cur = txForm.querySelector('[name="currency"]:checked')?.value || 'IDR';
+            const c = cur.value;
             const type = txForm.querySelector('[name="type"]:checked')?.value || 'deposit';
-            prefix.textContent = cur === 'AUD' ? 'A$' : 'Rp';
-            rateWrap.classList.toggle('hide', cur !== 'AUD');
+            prefix.textContent = sym(c);
+            if (curName) curName.textContent = meta(c)[2];
+            const foreign = c !== 'IDR';
+            rateWrap.classList.toggle('hide', !foreign);
+            previewWrap.classList.toggle('hide', !foreign);
+            if (rateLabel) rateLabel.textContent = 'Kurs 1 ' + c + ' dalam Rupiah';
+            if (foreign && rateHint) {
+                rateHint.textContent = rateOf(c) > 0 ? 'Kurs hari ini: Rp ' + rateFmt(rateOf(c)) + '. Ganti kalau kurs tukarmu berbeda.' : 'Kurs online belum tersedia — isi kurs tukarmu sendiri.';
+            }
             const a = parse(amount.value), r = parse(rate.value);
-            if (cur === 'AUD') {
-                previewWrap.classList.remove('hide');
-                preview.textContent = (a > 0 && r > 0) ? idr(a * r) : 'Rp 0';
-            } else {
-                previewWrap.classList.add('hide');
-            }
-            if (balanceHint) {
-                const b = balances[cur] || 0;
-                balanceHint.textContent = 'Saldo ' + cur + ' kamu: ' + (cur === 'AUD' ? aud(b) : idr(b));
-            }
+            preview.textContent = (a > 0 && r > 0) ? idr(a * r) : 'Rp 0';
+            const b = balances[c] || 0;
+            if (balanceHint) balanceHint.textContent = 'Saldo ' + c + ' kamu: ' + money(b, c);
             if (typeHint) typeHint.textContent = type === 'deposit' ? 'Uang masuk ke tabungan' : 'Uang keluar dari tabungan';
+            txForm.querySelectorAll('[data-quick]').forEach((btn) => {
+                const steps = c === 'IDR' ? [50000, 100000, 500000, 1000000] : (dec(c) === 0 ? [1000, 5000, 10000, 50000] : [5, 10, 50, 100]);
+                const v = steps[Number(btn.dataset.quick)];
+                btn.dataset.value = v;
+                btn.textContent = '+' + (c === 'IDR' ? (v >= 1e6 ? v / 1e6 + ' jt' : v / 1e3 + ' rb') : fmtNum(v, 0));
+            });
+            txForm.querySelectorAll('[data-pick-cur]').forEach((chip) => chip.classList.toggle('active', chip.dataset.pickCur === c));
         };
-        txForm.addEventListener('change', (e) => {
-            if (e.target.name === 'currency') {
-                // ubah format angka sesuai mata uang
-                const v = parse(amount.value);
-                if (!isNaN(v)) {
-                    amount.value = e.target.value === 'AUD'
-                        ? v.toLocaleString('id-ID', { maximumFractionDigits: 2 })
-                        : Math.round(v).toLocaleString('id-ID');
-                }
-                if (method && e.target.value === 'AUD' && !txForm.dataset.editing) method.value = 'cash';
-            }
+        const onCurChange = () => {
+            const c = cur.value;
+            const v = parse(amount.value);
+            if (!isNaN(v)) amount.value = toInput(v, dec(c));
+            if (c !== lastCur) rateTouched = false;
+            if (!rateTouched) rate.value = rateOf(c) > 0 ? rateFmt(rateOf(c)) : '';
+            lastCur = c;
             sync();
-        });
+        };
+        cur.addEventListener('change', onCurChange);
+        rate.addEventListener('input', () => { rateTouched = true; });
+        txForm.addEventListener('change', sync);
         txForm.addEventListener('money:change', sync);
-        sync();
-
+        txForm.querySelectorAll('[data-pick-cur]').forEach((chip) => chip.addEventListener('click', () => {
+            cur.value = chip.dataset.pickCur; onCurChange();
+        }));
         txForm.querySelectorAll('[data-quick]').forEach((b) => b.addEventListener('click', () => {
-            const cur = txForm.querySelector('[name="currency"]:checked')?.value || 'IDR';
-            const add = parseFloat(b.dataset[cur === 'AUD' ? 'aud' : 'idr']);
-            const v = (parse(amount.value) || 0) + add;
-            amount.value = cur === 'AUD' ? v.toLocaleString('id-ID', { maximumFractionDigits: 2 }) : Math.round(v).toLocaleString('id-ID');
+            const c = cur.value;
+            amount.value = toInput((parse(amount.value) || 0) + Number(b.dataset.value), dec(c));
             sync();
         }));
+        if (!rate.value && cur.value !== 'IDR') rate.value = rateOf(cur.value) > 0 ? rateFmt(rateOf(cur.value)) : '';
+        sync();
     }
 
     // ---------- Form tukar mata uang ----------
     const exForm = document.querySelector('[data-exchange-form]');
     if (exForm) {
-        const rate = parseFloat(exForm.dataset.rate);
+        const fromSel = exForm.querySelector('[name="from"]');
+        const toSel = exForm.querySelector('[name="to"]');
         const from = exForm.querySelector('[name="amount_from"]');
         const to = exForm.querySelector('[name="amount_to"]');
         const pFrom = exForm.querySelector('[data-prefix-from]');
@@ -124,83 +154,108 @@
         const balances = JSON.parse(exForm.dataset.balances || '{}');
         let toTouched = false;
 
-        const dir = () => exForm.querySelector('[name="direction"]:checked')?.value || 'IDR_AUD';
-        const fill = () => {
-            const d = dir();
-            const f = parse(from.value);
-            if (!toTouched && f > 0) {
-                const v = d === 'IDR_AUD' ? f / rate : f * rate;
-                to.value = d === 'IDR_AUD' ? v.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(v).toLocaleString('id-ID');
-            }
-            show();
-        };
+        const cross = (v, a, b) => (rateOf(b) > 0 ? v * rateOf(a) / rateOf(b) : 0);
         const show = () => {
-            const d = dir();
-            pFrom.textContent = d === 'IDR_AUD' ? 'Rp' : 'A$';
-            pTo.textContent = d === 'IDR_AUD' ? 'A$' : 'Rp';
-            to.dataset.currency = d === 'IDR_AUD' ? 'AUD' : 'IDR';
-            from.dataset.currency = d === 'IDR_AUD' ? 'IDR' : 'AUD';
+            const a = fromSel.value, b = toSel.value;
+            pFrom.textContent = sym(a); pTo.textContent = sym(b);
             const f = parse(from.value), t = parse(to.value);
-            const idrAmt = d === 'IDR_AUD' ? f : t, audAmt = d === 'IDR_AUD' ? t : f;
-            eff.textContent = (idrAmt > 0 && audAmt > 0) ? 'Rp ' + rateFmt(idrAmt / audAmt) : '—';
-            const cur = d === 'IDR_AUD' ? 'IDR' : 'AUD';
-            bal.textContent = 'Saldo ' + cur + ': ' + (cur === 'AUD' ? aud(balances.AUD || 0) : idr(balances.IDR || 0));
+            eff.textContent = (f > 0 && t > 0) ? '1 ' + a + ' = ' + (b === 'IDR' ? 'Rp ' + rateFmt(t / f) : rateFmt(t / f) + ' ' + b) : '—';
+            bal.textContent = 'Saldo ' + a + ': ' + money(balances[a] || 0, a);
+        };
+        const fill = () => {
+            const f = parse(from.value);
+            if (!toTouched) to.value = f > 0 ? toInput(cross(f, fromSel.value, toSel.value), dec(toSel.value)) : '';
+            show();
         };
         from.addEventListener('money:change', fill);
         to.addEventListener('money:change', () => { toTouched = to.value !== ''; show(); });
-        exForm.querySelectorAll('[name="direction"]').forEach((r) => r.addEventListener('change', () => {
+        [fromSel, toSel].forEach((s) => s.addEventListener('change', () => { toTouched = false; fill(); }));
+        exForm.querySelector('[data-swap]')?.addEventListener('click', () => {
+            const a = fromSel.value; fromSel.value = toSel.value; toSel.value = a;
             from.value = ''; to.value = ''; toTouched = false; show();
-        }));
-        exForm.querySelector('[data-reset-rate]')?.addEventListener('click', () => { toTouched = false; fill(); });
+        });
+        exForm.querySelector('[data-reset-rate]')?.addEventListener('click', (e) => { e.preventDefault(); toTouched = false; fill(); });
         show();
     }
 
-    // ---------- Konverter kecil ----------
+    // ---------- Konverter ----------
     document.querySelectorAll('[data-converter]').forEach((box) => {
-        const rate = parseFloat(box.dataset.rate);
-        const a = box.querySelector('[name="conv_aud"]');
-        const i = box.querySelector('[name="conv_idr"]');
-        a.addEventListener('money:change', () => { const v = parse(a.value); i.value = v > 0 ? Math.round(v * rate).toLocaleString('id-ID') : ''; });
-        i.addEventListener('money:change', () => { const v = parse(i.value); a.value = v > 0 ? (v / rate).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : ''; });
+        const amt = box.querySelector('[name="conv_amount"]');
+        const a = box.querySelector('[name="conv_from"]');
+        const b = box.querySelector('[name="conv_to"]');
+        const out = box.querySelector('[data-conv-out]');
+        const run = () => {
+            const v = parse(amt.value);
+            const r = rateOf(b.value) > 0 ? v * rateOf(a.value) / rateOf(b.value) : NaN;
+            out.textContent = v > 0 && isFinite(r) ? money(r, b.value) : '—';
+        };
+        amt.addEventListener('money:change', run);
+        [a, b].forEach((s) => s.addEventListener('change', run));
+        box.querySelector('[data-swap]')?.addEventListener('click', () => { const x = a.value; a.value = b.value; b.value = x; run(); });
+        run();
     });
 
-    // ---------- Pratinjau target ----------
+    // ---------- Cari & tampilkan semua di tabel kurs ----------
+    document.querySelectorAll('[data-filter-table]').forEach((input) => {
+        const table = document.querySelector(input.dataset.filterTable);
+        input.addEventListener('input', () => {
+            const q = input.value.trim().toLowerCase();
+            table.querySelectorAll('tbody tr').forEach((tr) => {
+                tr.classList.toggle('hide', q ? !tr.textContent.toLowerCase().includes(q) : tr.classList.contains('more'));
+            });
+        });
+    });
+    document.querySelector('[data-show-all]')?.addEventListener('click', (e) => {
+        document.querySelectorAll('tr.more').forEach((tr) => tr.classList.remove('more', 'hide'));
+        e.target.remove();
+    });
+
+    // ---------- Form target ----------
     const goalForm = document.querySelector('[data-goal-form]');
     if (goalForm) {
-        const rate = parseFloat(goalForm.dataset.rate);
+        const cur = goalForm.querySelector('[name="target_currency"]');
         const amt = goalForm.querySelector('[name="target_amount"]');
         const deadline = goalForm.querySelector('[name="deadline"]');
         const out = goalForm.querySelector('[data-plan]');
         const prefix = goalForm.querySelector('[data-prefix]');
         const emojiPrev = goalForm.querySelector('[data-emoji-preview]');
         const sync = () => {
-            const cur = goalForm.querySelector('[name="target_currency"]:checked')?.value || 'IDR';
-            prefix.textContent = cur === 'AUD' ? 'A$' : 'Rp';
+            const c = cur.value;
+            prefix.textContent = sym(c);
             const v = parse(amt.value);
             const em = goalForm.querySelector('[name="emoji"]:checked');
             const col = goalForm.querySelector('[name="color"]:checked');
-            if (emojiPrev && em) { emojiPrev.textContent = em.value; }
-            if (emojiPrev && col) { emojiPrev.style.background = col.value + '22'; }
+            if (emojiPrev && em) emojiPrev.textContent = em.value;
+            if (emojiPrev && col) emojiPrev.style.background = col.value + '22';
             let html = '';
-            if (v > 0 && cur === 'AUD') html += `<div>≈ <b>${idr(v * rate)}</b> dengan kurs hari ini</div>`;
+            if (v > 0 && c !== 'IDR' && rateOf(c) > 0) html += `<div class="kv"><span class="k">Dalam Rupiah</span><span class="v">≈ ${idr(v * rateOf(c))}</span></div>`;
             if (v > 0 && deadline.value) {
                 const days = Math.ceil((new Date(deadline.value) - new Date(new Date().toDateString())) / 86400000);
                 if (days > 0) {
-                    const per = (x) => cur === 'AUD' ? aud(x) : idr(x);
-                    html += `<div>Butuh sekitar <b>${per(v / Math.max(days / 30.4375, 1))}</b>/bulan · <b>${per(v / Math.max(days / 7, 1))}</b>/minggu · <b>${per(v / days)}</b>/hari <span class="muted">(${days} hari lagi)</span></div>`;
+                    html += `<div class="kv"><span class="k">Per bulan</span><span class="v">${money(v / Math.max(days / 30.4375, 1), c)}</span></div>`
+                        + `<div class="kv"><span class="k">Per minggu</span><span class="v">${money(v / Math.max(days / 7, 1), c)}</span></div>`
+                        + `<div class="kv"><span class="k">Per hari</span><span class="v">${money(v / days, c)}</span></div>`
+                        + `<div class="hint">${days} hari lagi menuju tenggat.</div>`;
                 } else {
-                    html += '<div class="text-red">Tanggal target sudah lewat.</div>';
+                    html += '<div class="alert alert-red">Tanggal target sudah lewat.</div>';
                 }
             }
-            out.innerHTML = html || '<span class="muted">Isi nominal & tanggal target untuk melihat rencana menabungnya.</span>';
+            out.innerHTML = html || '<p class="muted small">Isi nominal &amp; tanggal target untuk melihat rencana menabungnya.</p>';
         };
+        cur.addEventListener('change', () => { const v = parse(amt.value); if (!isNaN(v)) amt.value = toInput(v, dec(cur.value)); sync(); });
         goalForm.addEventListener('change', sync);
         goalForm.addEventListener('money:change', sync);
         deadline.addEventListener('input', sync);
         sync();
     }
 
-    // ---------- Konfirmasi hapus ----------
+    // ---------- Pratinjau tema di profil ----------
+    document.querySelectorAll('[data-theme-pick]').forEach((radio) => radio.addEventListener('change', () => {
+        const vars = JSON.parse(radio.dataset.themePick);
+        Object.entries(vars).forEach(([k, v]) => document.documentElement.style.setProperty('--' + k, v));
+    }));
+
+    // ---------- Konfirmasi ----------
     document.addEventListener('submit', (e) => {
         const msg = e.target.dataset.confirm;
         if (msg && !window.confirm(msg)) e.preventDefault();
@@ -209,7 +264,7 @@
     // ---------- Toast ----------
     document.querySelectorAll('.toast').forEach((t) => {
         t.querySelector('button')?.addEventListener('click', () => t.remove());
-        setTimeout(() => { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 4200);
+        setTimeout(() => { t.style.transition = 'opacity .4s'; t.style.opacity = '0'; setTimeout(() => t.remove(), 400); }, 4500);
     });
 
     // ---------- Animasi progress ----------
@@ -217,7 +272,17 @@
         document.querySelectorAll('.bar > span[data-w]').forEach((s) => { s.style.width = s.dataset.w + '%'; });
     });
 
-    // tutup menu details saat klik di luar
+    // ---------- Grafik gagal dimuat ----------
+    window.addEventListener('load', () => {
+        if (window.Chart) return;
+        document.querySelectorAll('.chart-box').forEach((box) => {
+            const d = document.createElement('div');
+            d.className = 'chart-fallback';
+            d.textContent = 'Grafik tidak bisa dimuat (cek koneksi internet).';
+            box.appendChild(d);
+        });
+    });
+
     document.addEventListener('click', (e) => {
         document.querySelectorAll('details.menu[open]').forEach((d) => { if (!d.contains(e.target)) d.removeAttribute('open'); });
     });

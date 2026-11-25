@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Goal;
 use App\Models\User;
 use App\Services\ExchangeRateService;
+use App\Support\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -14,27 +15,25 @@ class GoalController extends Controller
 
     public function index(Request $request)
     {
-        $rate = $this->rates->rate();
         $goals = $request->user()->visibleGoals()->with(['transactions', 'user'])
             ->orderBy('priority')->orderByRaw('deadline is null')->orderBy('deadline')->get()
-            ->each(fn ($g) => $g->progress_cache = $g->progress($rate));
+            ->each(fn ($g) => $g->progress_cache = $g->progress($this->rates));
 
-        $this->syncAchieved($goals);
+        Goal::syncAchieved($goals);
 
         $active = $goals->whereNull('achieved_at');
 
         return view('goals.index', [
             'active' => $active,
             'achieved' => $goals->whereNotNull('achieved_at'),
-            'totalTarget' => $active->sum(fn ($g) => $g->target_currency === 'AUD' ? $g->target_amount * $rate : $g->target_amount),
-            'totalSaved' => $active->sum(fn ($g) => $g->progress_cache['saved_idr']),
-            'rate' => $rate,
+            'totalTarget' => $active->sum(fn ($g) => $g->progress_cache['target_idr']),
+            'totalSaved' => $active->sum(fn ($g) => min($g->progress_cache['saved_idr'], $g->progress_cache['target_idr'])),
         ]);
     }
 
     public function create()
     {
-        return view('goals.form', ['goal' => new Goal(['emoji' => '🎯', 'color' => '#ec4899', 'target_currency' => 'IDR', 'priority' => 2]), 'rate' => $this->rates->rate()]);
+        return view('goals.form', ['goal' => new Goal(['emoji' => '🎯', 'color' => '#ec4899', 'target_currency' => 'IDR', 'priority' => 2])] + $this->formData());
     }
 
     public function store(Request $request)
@@ -47,18 +46,17 @@ class GoalController extends Controller
     public function show(Request $request, Goal $goal)
     {
         $this->authorizeView($request, $goal);
-        $rate = $this->rates->current();
         $goal->load(['transactions.user', 'user']);
-        $progress = $goal->progress($rate['rate']);
+        $progress = $goal->progress($this->rates);
         $goal->progress_cache = $progress;
-        $this->syncAchieved(collect([$goal]));
+        Goal::syncAchieved(collect([$goal]));
 
-        $people = User::orderBy('id')->get()->keyBy('id');
+        $people = User::approved()->orderBy('id')->get()->keyBy('id');
 
         return view('goals.show', [
             'goal' => $goal,
             'p' => $progress,
-            'rate' => $rate,
+            'rate' => $this->rates->info($goal->target_currency),
             'people' => $people,
             'history' => $goal->transactions->sortByDesc(fn ($t) => $t->date->format('Ymd').str_pad($t->id, 10, '0', STR_PAD_LEFT)),
             'canEdit' => $goal->canBeEditedBy($request->user()),
@@ -69,7 +67,7 @@ class GoalController extends Controller
     {
         abort_unless($goal->canBeEditedBy($request->user()), 403);
 
-        return view('goals.form', ['goal' => $goal, 'rate' => $this->rates->rate()]);
+        return view('goals.form', ['goal' => $goal] + $this->formData());
     }
 
     public function update(Request $request, Goal $goal)
@@ -101,7 +99,7 @@ class GoalController extends Controller
             'emoji' => ['required', 'string', 'max:16'],
             'color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'target_amount' => ['required', 'numeric', 'gt:0', 'max:999999999999'],
-            'target_currency' => ['required', Rule::in(['IDR', 'AUD'])],
+            'target_currency' => ['required', Rule::in(Currency::codes())],
             'deadline' => ['nullable', 'date'],
             'priority' => ['required', 'integer', 'between:1,3'],
             'is_shared' => ['nullable', 'boolean'],
@@ -113,23 +111,18 @@ class GoalController extends Controller
         return $data;
     }
 
+    private function formData(): array
+    {
+        return [
+            'currencies' => Currency::grouped(),
+            'rates' => $this->rates->all(),
+            'curMeta' => Currency::forJs(),
+        ];
+    }
+
     private function authorizeView(Request $request, Goal $goal): void
     {
         abort_unless($goal->user_id === $request->user()->id || $goal->is_shared, 403);
     }
 
-    /** Tandai otomatis target yang sudah 100%. */
-    private function syncAchieved($goals): void
-    {
-        foreach ($goals as $g) {
-            $done = $g->progress_cache['done'] ?? false;
-            if ($done && ! $g->achieved_at) {
-                $g->achieved_at = now();
-                $g->saveQuietly();
-            } elseif (! $done && $g->achieved_at) {
-                $g->achieved_at = null;
-                $g->saveQuietly();
-            }
-        }
-    }
 }

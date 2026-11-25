@@ -25,13 +25,14 @@ class ProfileController extends Controller
             'email' => ['required', 'email', 'max:150', Rule::unique('users')->ignore($user->id)],
             'color' => ['required', 'regex:/^#[0-9a-fA-F]{6}$/'],
             'emoji' => ['required', 'string', 'max:16'],
+            'theme' => ['required', Rule::in(array_keys(config('themes')))],
             'monthly_target' => ['nullable', 'numeric', 'min:0', 'max:999999999999'],
         ]);
         $data['monthly_target'] = (int) round($data['monthly_target'] ?? 0);
 
         $user->update($data);
 
-        return back()->with('success', 'Profil disimpan 🌸');
+        return back()->with('success', 'Profil disimpan.');
     }
 
     public function password(Request $request)
@@ -43,6 +44,6 @@ class ProfileController extends Controller
 
         $request->user()->update(['password' => Hash::make($request->input('password'))]);
 
-        return back()->with('success', 'Kata sandi diganti 🔒');
+        return back()->with('success', 'Kata sandi diganti.');
     }
 }

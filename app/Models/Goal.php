@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\ExchangeRateService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,6 +39,21 @@ class Goal extends Model
         return $this->hasMany(Transaction::class);
     }
 
+    /** Tandai otomatis target yang sudah 100% (dan buka lagi bila turun). */
+    public static function syncAchieved(iterable $goals): void
+    {
+        foreach ($goals as $g) {
+            $done = $g->progress_cache['done'] ?? false;
+            if ($done && ! $g->achieved_at) {
+                $g->achieved_at = now();
+                $g->saveQuietly();
+            } elseif (! $done && $g->achieved_at) {
+                $g->achieved_at = null;
+                $g->saveQuietly();
+            }
+        }
+    }
+
     public function canBeEditedBy(User $user): bool
     {
         return $this->user_id === $user->id || $this->is_shared;
@@ -50,41 +66,42 @@ class Goal extends Model
 
     /**
      * Hitung semua angka progres target.
-     * AUD yang terkumpul dinilai dengan kurs saat ini (nilai pasar sekarang).
+     * Uang di mata uang apa pun dinilai ke Rupiah dengan kurs saat ini, lalu ke mata uang target.
      */
-    public function progress(float $audRate): array
+    public function progress(?ExchangeRateService $rates = null): array
     {
+        $rates ??= app(ExchangeRateService::class);
         $txs = $this->relationLoaded('transactions') ? $this->transactions : $this->transactions()->get();
+        $targetRate = $rates->rate($this->target_currency) ?: 1;
 
-        $idrPart = 0.0;
-        $audPart = 0.0;
-        $byUser = [];
+        $parts = [];       // per mata uang
+        $byUser = [];      // Rupiah per orang
+        $savedIdr = 0.0;
+        $recentIdr = 0.0;
+        $since = Carbon::today()->subDays(90);
         foreach ($txs as $t) {
             $signed = $t->signedAmount();
-            if ($t->currency === 'AUD') {
-                $audPart += $signed;
-            } else {
-                $idrPart += $signed;
+            $idr = $signed * $rates->rate($t->currency);
+            $parts[$t->currency] = ($parts[$t->currency] ?? 0) + $signed;
+            $byUser[$t->user_id] = ($byUser[$t->user_id] ?? 0) + $idr;
+            $savedIdr += $idr;
+            if ($t->date->gte($since)) {
+                $recentIdr += $idr;
             }
-            $byUser[$t->user_id] = ($byUser[$t->user_id] ?? 0) + ($t->currency === 'AUD' ? $signed * $audRate : $signed);
         }
+        $parts = array_filter($parts, fn ($v) => abs($v) >= 0.005);
 
-        $savedIdr = $idrPart + $audPart * $audRate;
-        $saved = $this->target_currency === 'AUD'
-            ? $audPart + ($audRate > 0 ? $idrPart / $audRate : 0)
-            : $savedIdr;
-
+        $saved = $savedIdr / $targetRate;
         $target = max($this->target_amount, 0.01);
         $remaining = max($target - $saved, 0);
         $percent = min(max($saved / $target * 100, 0), 100);
 
-        // Rencana per periode bila ada deadline
+        // Rencana per periode bila ada tenggat
         $daysLeft = null;
         $perMonth = $perWeek = $perDay = null;
         $overdue = false;
         if ($this->deadline) {
-            $today = Carbon::today();
-            $daysLeft = (int) $today->diffInDays($this->deadline, false);
+            $daysLeft = (int) Carbon::today()->diffInDays($this->deadline, false);
             $overdue = $daysLeft < 0 && $remaining > 0;
             if ($remaining > 0 && $daysLeft > 0) {
                 $perDay = $remaining / $daysLeft;
@@ -94,18 +111,7 @@ class Goal extends Model
         }
 
         // Kecepatan menabung 90 hari terakhir -> perkiraan tanggal tercapai
-        $since = Carbon::today()->subDays(90);
-        $recent = 0.0;
-        foreach ($txs as $t) {
-            if ($t->date->gte($since)) {
-                $v = $t->currency === 'AUD' ? $t->signedAmount() * $audRate : $t->signedAmount();
-                $recent += $v;
-            }
-        }
-        if ($this->target_currency === 'AUD' && $audRate > 0) {
-            $recent /= $audRate;
-        }
-        $pacePerMonth = $recent / (90 / 30.4375);
+        $pacePerMonth = ($recentIdr / $targetRate) / (90 / 30.4375);
         $eta = null;
         if ($remaining > 0 && $pacePerMonth > 0) {
             $months = $remaining / $pacePerMonth;
@@ -122,8 +128,8 @@ class Goal extends Model
         return [
             'saved' => $saved,
             'saved_idr' => $savedIdr,
-            'idr_part' => $idrPart,
-            'aud_part' => $audPart,
+            'target_idr' => $this->target_amount * $targetRate,
+            'parts' => $parts,
             'target' => $this->target_amount,
             'remaining' => $remaining,
             'percent' => $percent,

@@ -2,8 +2,8 @@
 @section('title', 'Daftar')
 
 @section('content')
-    <h1>{{ $isFirst ? 'Buat akun pertama ✨' : 'Gabung, sayang 💞' }}</h1>
-    <p class="muted mt-1">{{ $isFirst ? 'Setelah ini, pasanganmu bisa daftar akun kedua.' : 'Ini akun terakhir — setelah daftar, pendaftaran ditutup.' }}</p>
+    <h1>{{ $isFirst ? 'Buat akun pertama ✨' : 'Daftar akun 💞' }}</h1>
+    <p class="muted mt-1">{{ $isFirst ? 'Akun pertama otomatis menjadi admin dan langsung aktif.' : 'Setelah mendaftar, akunmu perlu disetujui pemilik akun utama dulu.' }}</p>
 
     <form method="POST" action="{{ route('register.store') }}" class="form mt-4">
         @csrf
@@ -32,7 +32,7 @@
             <label for="password_confirmation">Ulangi kata sandi</label>
             <input id="password_confirmation" type="password" name="password_confirmation" class="input" required autocomplete="new-password">
         </div>
-        <button class="btn btn-primary btn-lg btn-block">Daftar & Masuk</button>
+        <button class="btn btn-primary btn-lg btn-block">{{ $isFirst ? 'Daftar & Masuk' : 'Kirim Pendaftaran' }}</button>
     </form>
     <p class="small center mt-3">Sudah punya akun? <a href="{{ route('login') }}" class="bold">Masuk</a></p>
 @endsection

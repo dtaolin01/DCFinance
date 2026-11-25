@@ -1,19 +1,19 @@
 # 💗 DCFinance
 
-Aplikasi web (Laravel 12) untuk mencatat tabungan **kamu dan pasangan secara terpisah**, mendukung **Rupiah & AUD cash**, lengkap dengan **target tabungan**.
+Aplikasi web (Laravel 12) untuk mencatat tabungan **kamu dan pasangan secara terpisah**, mendukung **Rupiah & 150+ mata uang asing**, lengkap dengan **target tabungan**.
 
 ## ✨ Fitur
 
-- **2 akun terpisah** — masing-masing login sendiri, data sendiri. Pendaftaran otomatis tertutup setelah 2 akun.
-- **Setor / Tarik** dalam IDR atau AUD. Setiap transaksi AUD menyimpan kurs saat itu dan nilai rupiahnya.
-- **Kurs AUD → IDR otomatis** (ExchangeRate-API, cadangan Frankfurter/ECB & Currency-API), di-cache, bisa diganti **kurs manual**.
-- **Untung/rugi kurs AUD** — modal rata-rata tertimbang vs nilai hari ini.
-- **Tukar uang** (Rupiah → AUD cash atau sebaliknya) tanpa terhitung sebagai setor/tarik.
-- **Target** pribadi atau **bersama**, dalam IDR atau AUD: progres %, sisa, kebutuhan per bulan/minggu/hari, perkiraan tanggal tercapai, status sesuai jalur, kontribusi tiap orang.
-- **Dashboard**: total dirupiahkan, saldo per mata uang, arus bulanan & grafik saldo 12 bulan, rata-rata/bulan, streak, komposisi simpanan, insight otomatis.
-- **Target menabung bulanan** per orang.
+- **Akun terpisah + persetujuan** — akun pertama otomatis jadi **admin**. Akun yang mendaftar setelahnya harus **disetujui admin** (menu *Persetujuan*) sebelum bisa masuk. Akun aktif maksimal `DC_MAX_USERS` (default 2).
+- **Semua mata uang (150+)** — setor/tarik dalam Rupiah atau mata uang apa pun (USD, AUD, SGD, JPY, EUR, …). Setiap transaksi valas menyimpan kurs saat itu dan nilai rupiahnya.
+- **Kurs otomatis semua mata uang** (ExchangeRate-API, cadangan Currency-API & Frankfurter), di-cache, bisa diganti **kurs manual** per mata uang.
+- **Untung/rugi kurs per mata uang** — modal rata-rata tertimbang vs nilai hari ini.
+- **Tukar uang** antar mata uang apa pun tanpa terhitung sebagai setor/tarik.
+- **Target** pribadi atau **bersama**, dalam mata uang apa pun: progres, sisa, kebutuhan per bulan/minggu/hari, perkiraan tanggal tercapai, kontribusi tiap orang.
+- **Tema warna per akun** (Pink default, Hitam, Biru, Ungu, Hijau, Tosca, Oranye, Merah) — dipilih di *Profil & Tema*.
+- **Dashboard**: total dirupiahkan, saldo Rupiah & valas, grafik 12 bulan, rata-rata, streak, komposisi simpanan, insight otomatis.
 - **Kita Berdua**: bandingkan progres dan lihat target bersama.
-- UI pink–putih, responsif (sidebar di desktop, bottom nav di HP). Tanpa Node/Vite — cocok untuk shared hosting.
+- Responsif (sidebar di desktop, bottom nav di HP). Tanpa Node/Vite — cocok untuk shared hosting.
 
 ## 🚀 Menjalankan di lokal
 
@@ -54,7 +54,13 @@ Mau coba dengan data contoh? `php artisan db:seed --class=DemoSeeder` (login `de
    File `.htaccess` di root repo otomatis meneruskan semua request ke folder `public/`.
 6. hPanel → **Security → SSL** → pasang SSL untuk subdomain. Buka situsnya dan daftar akun.
 
-Update berikutnya: `git pull && composer install --no-dev && php artisan migrate --force && php artisan optimize`
+Update berikutnya:
+```bash
+git pull
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan optimize
+```
 
 ### Shared hosting lain (cPanel, dll.)
 
@@ -96,26 +102,28 @@ Sama seperti di atas; arahkan root Nginx/Apache ke `public/`, gunakan PHP-FPM.
 
 | Variabel | Default | Fungsi |
 |---|---|---|
-| `DC_MAX_USERS` | `2` | Jumlah akun maksimal; pendaftaran tertutup setelah penuh |
-| `DC_DEFAULT_AUD_RATE` | `10500` | Kurs cadangan bila semua API kurs gagal |
+| `DC_MAX_USERS` | `2` | Jumlah akun aktif maksimal; pendaftaran tertutup setelah penuh |
 | `DC_RATE_CACHE_MINUTES` | `180` | Lama kurs online disimpan |
 | `APP_TIMEZONE` | `Asia/Jakarta` | Zona waktu |
 
 ## 🧮 Cara perhitungan
 
 - **Nilai rupiah transaksi** = nominal × kurs saat transaksi (IDR = 1).
-- **Total tabungan** = saldo Rupiah + saldo AUD × kurs hari ini.
-- **Modal AUD** = rata-rata tertimbang kurs setiap AUD masuk; AUD keluar mengurangi modal secara proporsional.
-- **Untung/rugi kurs** = nilai AUD hari ini − modal AUD.
+- **Total tabungan** = saldo Rupiah + Σ (saldo tiap valas × kurs hari ini).
+- **Modal valas** = rata-rata tertimbang kurs setiap uang masuk per mata uang; uang keluar mengurangi modal secara proporsional.
+- **Untung/rugi kurs** = nilai valas hari ini − modalnya.
+- **Kurs dipakai** (urutan): kurs manual → kurs online → kurs online terakhir tersimpan → kurs transaksi terakhir → perkiraan offline.
 - **Tabungan bersih bulanan** = setor − tarik (tukar uang tidak dihitung).
-- **Target**: transaksi yang ditautkan ke target. AUD dinilai kurs hari ini. Kebutuhan per bulan = sisa ÷ bulan tersisa sampai tenggat. Perkiraan tercapai memakai kecepatan menabung 90 hari terakhir.
+- **Target**: transaksi yang ditautkan ke target, semua dinilai ke Rupiah dengan kurs hari ini lalu ke mata uang target. Kebutuhan per bulan = sisa ÷ bulan tersisa sampai tenggat. Perkiraan tercapai memakai kecepatan menabung 90 hari terakhir.
 - Penarikan tidak boleh melebihi saldo mata uang tersebut.
 
 ## 🗂️ Struktur penting
 
 ```
 app/Services/SavingsCalculator.php   # semua perhitungan tabungan
-app/Services/ExchangeRateService.php # kurs AUD (online/manual/cadangan)
+app/Services/ExchangeRateService.php # kurs semua mata uang (online/manual/cadangan)
+config/currencies.php                # daftar mata uang
+config/themes.php                    # tema warna
 app/Models/Goal.php                  # progres & rencana target
 app/Http/Controllers/                # Dashboard, Transaksi, Tukar, Target, Berdua, Kurs, Profil
 resources/views/                     # tampilan Blade

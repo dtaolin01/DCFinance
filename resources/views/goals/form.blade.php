@@ -2,10 +2,14 @@
 @php $editing = $goal->exists; @endphp
 @section('title', $editing ? 'Edit target' : 'Target baru')
 
+@push('data')
+    @include('partials.dc-data')
+@endpush
+
 @section('content')
 @php
     $cur = old('target_currency', $goal->target_currency);
-    $amt = old('target_amount', $goal->target_amount ? ($cur === 'AUD' ? number_format($goal->target_amount, 2, ',', '.') : number_format($goal->target_amount, 0, ',', '.')) : '');
+    $amt = old('target_amount', $goal->target_amount ? number_format($goal->target_amount, \App\Support\Currency::decimals($cur), ',', '.') : '');
 @endphp
 <div class="page-head">
     <div>
@@ -15,15 +19,15 @@
     </div>
 </div>
 
-<form method="POST" action="{{ $editing ? route('goals.update', $goal) : route('goals.store') }}" class="grid g-main" data-goal-form data-rate="{{ $rate }}">
+<form method="POST" action="{{ $editing ? route('goals.update', $goal) : route('goals.store') }}" class="grid g-main" data-goal-form>
     @csrf
     @if ($editing) @method('PUT') @endif
     <div class="card form">
-        <div class="row" style="gap:14px">
-            <div class="goal-emoji" data-emoji-preview style="width:62px;height:62px;font-size:32px;background: {{ $goal->color }}22">{{ old('emoji', $goal->emoji) }}</div>
-            <div class="field" style="flex:1">
+        <div class="row" style="gap:14px;align-items:flex-end">
+            <div class="goal-emoji" data-emoji-preview style="width:58px;height:58px;font-size:30px;background: {{ $goal->color }}22">{{ old('emoji', $goal->emoji) }}</div>
+            <div class="field" style="flex:1;min-width:0">
                 <label for="name">Nama target</label>
-                <input id="name" name="name" class="input @error('name') is-invalid @enderror" value="{{ old('name', $goal->name) }}" placeholder="mis. Liburan ke Sydney" required maxlength="100">
+                <input id="name" name="name" class="input @error('name') is-invalid @enderror" value="{{ old('name', $goal->name) }}" placeholder="mis. Liburan ke Jepang" required maxlength="100">
                 @error('name')<div class="error">{{ $message }}</div>@enderror
             </div>
         </div>
@@ -46,26 +50,21 @@
             </div>
         </div>
 
-        <div class="field">
-            <span class="label">Target dalam</span>
-            <div class="seg">
-                <label><input type="radio" name="target_currency" value="IDR" @checked($cur === 'IDR')><span>@include('partials.cur', ['c' => 'IDR']) Rupiah</span></label>
-                <label><input type="radio" name="target_currency" value="AUD" @checked($cur === 'AUD')><span>@include('partials.cur', ['c' => 'AUD']) Dolar Australia</span></label>
-            </div>
-        </div>
-
-        <div class="field">
-            <label for="target_amount">Nominal target</label>
-            <div class="input-money">
-                <span class="prefix" data-prefix>Rp</span>
-                <input id="target_amount" name="target_amount" class="input num @error('target_amount') is-invalid @enderror" inputmode="decimal" value="{{ $amt }}" data-money data-currency-from="target_currency" placeholder="0" required>
-            </div>
-            @error('target_amount')<div class="error">{{ $message }}</div>@enderror
-        </div>
-
         <div class="grid g-2" style="gap:14px">
             <div class="field">
-                <label for="deadline">Tercapai sebelum <span class="muted">(opsional)</span></label>
+                <label for="target_currency">Mata uang target</label>
+                @include('partials.cur-select', ['name' => 'target_currency', 'selected' => $cur, 'groups' => $currencies])
+            </div>
+            <div class="field">
+                <label for="target_amount">Nominal target</label>
+                <div class="input-money sm">
+                    <span class="prefix" data-prefix>{{ \App\Support\Currency::symbol($cur) }}</span>
+                    <input id="target_amount" name="target_amount" class="input num @error('target_amount') is-invalid @enderror" inputmode="decimal" value="{{ $amt }}" data-money data-currency-from="target_currency" placeholder="0" required>
+                </div>
+                @error('target_amount')<div class="error">{{ $message }}</div>@enderror
+            </div>
+            <div class="field">
+                <label for="deadline">Tercapai sebelum <span class="opt">(opsional)</span></label>
                 <input id="deadline" type="date" name="deadline" class="input" value="{{ old('deadline', optional($goal->deadline)->format('Y-m-d')) }}">
             </div>
             <div class="field">
@@ -84,7 +83,7 @@
         </label>
 
         <div class="field">
-            <label for="notes">Catatan <span class="muted">(opsional)</span></label>
+            <label for="notes">Catatan <span class="opt">(opsional)</span></label>
             <textarea id="notes" name="notes" class="input" maxlength="1000" placeholder="Kenapa target ini penting buat kamu?">{{ old('notes', $goal->notes) }}</textarea>
         </div>
 
@@ -92,15 +91,15 @@
     </div>
 
     <div class="stack">
-        <div class="card card-pink">
+        <div class="card card-soft">
             <div class="card-head"><h3>@include('partials.tile', ['n' => 'calendar']) Rencana menabung</h3></div>
-            <div class="stack small" style="gap:8px" data-plan></div>
+            <div data-plan></div>
         </div>
         @if ($editing)
             <div class="card">
-                <h3 style="font-size:15px">Zona hati-hati</h3>
-                <p class="small muted mt-1">Menghapus target tidak menghapus transaksinya — uangnya tetap ada di tabungan.</p>
-                <button form="delete-goal" class="btn btn-danger btn-block mt-3">@include('partials.icon', ['n' => 'trash']) Hapus target</button>
+                <div class="card-head"><h3>@include('partials.tile', ['n' => 'trash', 'tone' => 'red']) Hapus target</h3></div>
+                <p class="small muted">Menghapus target tidak menghapus transaksinya — uangnya tetap ada di tabungan.</p>
+                <button form="delete-goal" class="btn btn-danger btn-block mt-3">Hapus target ini</button>
             </div>
         @endif
     </div>

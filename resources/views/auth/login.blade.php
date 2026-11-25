@@ -17,15 +17,17 @@
             <input id="password" type="password" name="password" class="input" required autocomplete="current-password">
         </div>
         <label class="row small" style="cursor:pointer">
-            <input type="checkbox" name="remember" value="1" checked style="accent-color:var(--pink-500);width:16px;height:16px"> Ingat saya di perangkat ini
+            <input type="checkbox" name="remember" value="1" checked style="accent-color:var(--acc-500);width:16px;height:16px"> Ingat saya di perangkat ini
         </label>
         <button class="btn btn-primary btn-lg btn-block">Masuk</button>
     </form>
 
     @if ($registrationOpen)
-        <div class="alert mt-4 small">
-            Belum punya akun? <a href="{{ route('register') }}" class="bold">Daftar di sini</a>
-            <div class="muted xs mt-1">Pendaftaran terbuka sampai {{ config('dcfinance.max_users') }} akun (kamu & pasangan), lalu otomatis ditutup.</div>
+        <div class="alert mt-4">
+            @include('partials.tile', ['n' => 'user'])
+            <div>Belum punya akun? <a href="{{ route('register') }}" class="bold">Daftar di sini</a>
+                <div class="muted xs mt-1">Akun baru perlu disetujui pemilik akun utama sebelum bisa masuk.</div>
+            </div>
         </div>
     @endif
 @endsection

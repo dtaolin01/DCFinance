@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CoupleController;
 use App\Http\Controllers\DashboardController;
@@ -17,7 +18,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/daftar', [AuthController::class, 'register'])->name('register.store');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'approved'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/keluar', [AuthController::class, 'logout'])->name('logout');
 
@@ -37,7 +38,12 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/kurs', [RateController::class, 'index'])->name('rates.index');
     Route::put('/kurs', [RateController::class, 'update'])->name('rates.update');
+    Route::delete('/kurs/{code}', [RateController::class, 'clear'])->name('rates.clear');
     Route::post('/kurs/refresh', [RateController::class, 'refresh'])->name('rates.refresh');
+
+    Route::get('/akun', [AccountController::class, 'index'])->name('accounts.index');
+    Route::post('/akun/{user}/setujui', [AccountController::class, 'approve'])->name('accounts.approve');
+    Route::delete('/akun/{user}', [AccountController::class, 'reject'])->name('accounts.reject');
 
     Route::get('/profil', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::put('/profil', [ProfileController::class, 'update'])->name('profile.update');

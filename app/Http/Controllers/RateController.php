@@ -2,45 +2,68 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Setting;
 use App\Services\ExchangeRateService;
+use App\Support\Currency;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RateController extends Controller
 {
-    public function index(ExchangeRateService $rates)
+    public function __construct(private ExchangeRateService $rates) {}
+
+    public function index()
     {
+        $table = $this->rates->table();
+        $rows = [];
+        foreach (Currency::codes() as $code) {
+            if ($code === 'IDR') {
+                continue;
+            }
+            $info = $this->rates->info($code);
+            $rows[] = ['code' => $code, 'name' => Currency::name($code), 'rate' => $info['rate'], 'mode' => $info['mode']];
+        }
+        $popular = array_flip(Currency::popular());
+
         return view('rates.index', [
-            'rate' => $rates->current(),
-            'manual' => Setting::get('rate_manual', ['enabled' => false, 'rate' => null]),
-            'last' => Setting::get('rate_last'),
+            'table' => $table,
+            'rows' => $rows,
+            'popularRows' => array_values(array_filter($rows, fn ($r) => isset($popular[$r['code']]))),
+            'manual' => $this->rates->manual(),
+            'currencies' => Currency::grouped([], false),
+            'rates' => $this->rates->all(),
+            'curMeta' => Currency::forJs(),
         ]);
     }
 
-    public function update(Request $request, ExchangeRateService $rates)
+    public function update(Request $request)
     {
-        $request->merge(['manual_rate' => parse_amount($request->input('manual_rate'))]);
+        $request->merge([
+            'currency' => strtoupper((string) $request->input('currency')),
+            'manual_rate' => parse_amount($request->input('manual_rate')),
+        ]);
         $data = $request->validate([
-            'enabled' => ['nullable', 'boolean'],
-            'manual_rate' => ['nullable', 'numeric', 'between:1000,100000', 'required_if:enabled,1'],
-        ], ['manual_rate.required_if' => 'Isi kurs manual dulu.', 'manual_rate.between' => 'Kurs harus antara 1.000 dan 100.000.']);
+            'currency' => ['required', Rule::in(array_values(array_diff(Currency::codes(), ['IDR'])))],
+            'manual_rate' => ['required', 'numeric', 'gt:0', 'max:100000000'],
+        ], ['manual_rate.required' => 'Isi kursnya dulu.']);
 
-        Setting::put('rate_manual', [
-            'enabled' => $request->boolean('enabled'),
-            'rate' => $data['manual_rate'] ?? null,
-            'updated_at' => now()->toIso8601String(),
-        ]);
-        $rates->refresh();
+        $this->rates->setManual($data['currency'], (float) $data['manual_rate']);
 
-        return back()->with('success', $request->boolean('enabled') ? 'Kurs manual diaktifkan.' : 'Kembali memakai kurs online.');
+        return back()->with('success', 'Kurs manual '.$data['currency'].' disimpan: Rp '.rate_fmt($data['manual_rate']).'.');
     }
 
-    public function refresh(ExchangeRateService $rates)
+    public function clear(string $code)
     {
-        $r = $rates->refresh();
+        $this->rates->setManual(strtoupper($code), null);
 
-        return back()->with($r['mode'] === 'live' ? 'success' : 'error', $r['mode'] === 'live'
-            ? 'Kurs diperbarui: 1 AUD = Rp '.rate_fmt($r['rate'])
-            : 'Gagal mengambil kurs online, memakai '.$r['source'].'.');
+        return back()->with('success', 'Kurs manual '.strtoupper($code).' dihapus, kembali ke kurs online.');
+    }
+
+    public function refresh()
+    {
+        $t = $this->rates->refresh();
+
+        return back()->with($t['mode'] === 'live' ? 'success' : 'error', $t['mode'] === 'live'
+            ? 'Kurs diperbarui dari '.$t['source'].'.'
+            : 'Gagal mengambil kurs online, memakai kurs terakhir yang tersimpan.');
     }
 }
