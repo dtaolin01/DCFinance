@@ -9,8 +9,8 @@
 @endphp
 <div class="page-head">
     <div>
-        <a href="{{ $editing ? route('goals.show', $goal) : route('goals.index') }}" class="small bold row" style="gap:4px"><span style="width:16px;display:inline-flex">@include('partials.icon', ['n' => 'back'])</span>Kembali</a>
-        <h1 class="mt-1">{{ $editing ? 'Edit target' : 'Target baru ✨' }}</h1>
+        <a href="{{ $editing ? route('goals.show', $goal) : route('goals.index') }}" class="back-link">@include('partials.icon', ['n' => 'back'])Kembali</a>
+        <h1>{{ $editing ? 'Edit target' : 'Target baru' }}</h1>
         <p>Tentukan mimpinya, nominalnya, dan kapan mau tercapai.</p>
     </div>
 </div>
@@ -49,8 +49,8 @@
         <div class="field">
             <span class="label">Target dalam</span>
             <div class="seg">
-                <label><input type="radio" name="target_currency" value="IDR" @checked($cur === 'IDR')><span>🇮🇩 Rupiah</span></label>
-                <label><input type="radio" name="target_currency" value="AUD" @checked($cur === 'AUD')><span>🇦🇺 AUD</span></label>
+                <label><input type="radio" name="target_currency" value="IDR" @checked($cur === 'IDR')><span>@include('partials.cur', ['c' => 'IDR']) Rupiah</span></label>
+                <label><input type="radio" name="target_currency" value="AUD" @checked($cur === 'AUD')><span>@include('partials.cur', ['c' => 'AUD']) Dolar Australia</span></label>
             </div>
         </div>
 
@@ -71,16 +71,16 @@
             <div class="field">
                 <label for="priority">Prioritas</label>
                 <select id="priority" name="priority" class="input">
-                    <option value="1" @selected(old('priority', $goal->priority) == 1)>🔴 Tinggi</option>
-                    <option value="2" @selected(old('priority', $goal->priority) == 2)>🟡 Sedang</option>
-                    <option value="3" @selected(old('priority', $goal->priority) == 3)>🟢 Rendah</option>
+                    <option value="1" @selected(old('priority', $goal->priority) == 1)>Tinggi</option>
+                    <option value="2" @selected(old('priority', $goal->priority) == 2)>Sedang</option>
+                    <option value="3" @selected(old('priority', $goal->priority) == 3)>Rendah</option>
                 </select>
             </div>
         </div>
 
         <label class="check">
             <input type="checkbox" name="is_shared" value="1" @checked(old('is_shared', $goal->is_shared))>
-            <div><div class="bold">💑 Target bersama</div><div class="small muted">Kalian berdua bisa melihat & menabung ke target ini. Kontribusi masing-masing tetap tercatat terpisah.</div></div>
+            <div><div class="bold">Target bersama</div><div class="small muted">Kalian berdua bisa melihat & menabung ke target ini. Kontribusi masing-masing tetap tercatat terpisah.</div></div>
         </label>
 
         <div class="field">
@@ -93,7 +93,7 @@
 
     <div class="stack">
         <div class="card card-pink">
-            <div class="card-head"><h3>🗓️ Rencana menabung</h3></div>
+            <div class="card-head"><h3>@include('partials.tile', ['n' => 'calendar']) Rencana menabung</h3></div>
             <div class="stack small" style="gap:8px" data-plan></div>
         </div>
         @if ($editing)

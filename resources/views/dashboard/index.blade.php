@@ -5,12 +5,13 @@
 @php
     $hour = now()->hour;
     $greet = $hour < 11 ? 'Selamat pagi' : ($hour < 15 ? 'Selamat siang' : ($hour < 19 ? 'Selamat sore' : 'Selamat malam'));
+    $palette = ['#ec4899', '#f9a8d4', '#a855f7', '#fb7185', '#f59e0b', '#14b8a6', '#db2777', '#c084fc'];
 @endphp
 
 <div class="page-head">
     <div>
-        <h1>{{ $greet }}, {{ $user->display_name }} {{ $user->emoji }}</h1>
-        <p>{{ now()->translatedFormat('l, d F Y') }} · ini ringkasan tabunganmu.</p>
+        <h1>{{ $greet }}, {{ $user->display_name }}</h1>
+        <p>{{ now()->translatedFormat('l, d F Y') }}</p>
     </div>
     <div class="page-actions hide-m">
         <a href="{{ route('exchange.create') }}" class="btn btn-ghost">@include('partials.icon', ['n' => 'swap']) Tukar Uang</a>
@@ -22,70 +23,62 @@
     <div class="stack">
         {{-- HERO --}}
         <div class="card hero">
-            <div class="label">Total tabungan (dirupiahkan)</div>
+            <div class="label">@include('partials.tile', ['n' => 'wallet', 'tone' => 'white']) Total tabungan (dirupiahkan)</div>
             <div class="big num">{{ rupiah($s['total_idr']) }}</div>
             <div class="sub num">≈ {{ aud($s['total_aud']) }} · kurs 1 AUD = Rp {{ rate_fmt($s['rate']) }}</div>
             <div class="hero-split">
                 <div class="hero-box">
-                    <div class="k">🇮🇩 Rupiah</div>
+                    <div class="k">@include('partials.cur', ['c' => 'IDR']) Rupiah</div>
                     <div class="v num">{{ rupiah($s['idr']) }}</div>
                 </div>
                 <div class="hero-box">
-                    <div class="k">🇦🇺 AUD cash</div>
+                    <div class="k">@include('partials.cur', ['c' => 'AUD']) AUD cash</div>
                     <div class="v num">{{ aud($s['aud']) }}</div>
                     <div class="xs" style="opacity:.85">≈ {{ rupiah($s['aud_value_idr']) }}</div>
                 </div>
                 <div class="hero-box">
-                    <div class="k">📆 Bulan ini (bersih)</div>
+                    <div class="k">Bersih bulan ini</div>
                     <div class="v num">{{ rupiah($s['month_net'], true) }}</div>
                     @if ($s['monthly_target_pct'] !== null)
-                        <div class="bar bar-white mt-1" style="height:6px"><span data-w="{{ round($s['monthly_target_pct']) }}" style="width:0"></span></div>
+                        <div class="bar bar-white mt-1" style="height:5px"><span data-w="{{ round($s['monthly_target_pct']) }}" style="width:0"></span></div>
                     @endif
                 </div>
             </div>
             <div class="hero-actions">
                 <a href="{{ route('transactions.create') }}" class="btn btn-white">@include('partials.icon', ['n' => 'arrow-down']) Setor</a>
-                <a href="{{ route('transactions.create', ['currency' => 'AUD']) }}" class="btn btn-glass">🇦🇺 Setor AUD</a>
+                <a href="{{ route('transactions.create', ['currency' => 'AUD']) }}" class="btn btn-glass">@include('partials.icon', ['n' => 'plus']) Setor AUD</a>
                 <a href="{{ route('transactions.create', ['type' => 'withdraw']) }}" class="btn btn-glass">@include('partials.icon', ['n' => 'arrow-up']) Tarik</a>
             </div>
         </div>
 
         {{-- STATS --}}
         <div class="grid g-4 stats">
-            <div class="card card-tight">
-                <div class="stat">
-                    <div class="stat-icon">💰</div>
-                    <div><div class="stat-k">Masuk bulan ini</div><div class="stat-v num text-green">{{ rupiah_short($s['month_in']) }}</div><div class="stat-s">Keluar {{ rupiah_short($s['month_out']) }}</div></div>
+            <div class="card">
+                @include('partials.tile', ['n' => 'arrow-down', 'tone' => 'green', 'class' => 'tile-lg'])
+                <div><div class="stat-k">Masuk bulan ini</div><div class="stat-v num">{{ rupiah_short($s['month_in']) }}</div><div class="stat-s">Keluar {{ rupiah_short($s['month_out']) }}</div></div>
+            </div>
+            <div class="card">
+                @include('partials.tile', ['n' => 'chart', 'tone' => 'pink', 'class' => 'tile-lg'])
+                <div><div class="stat-k">Rata-rata/bulan</div><div class="stat-v num">{{ rupiah_short($s['avg_monthly']) }}</div><div class="stat-s">6 bulan terakhir</div></div>
+            </div>
+            <div class="card">
+                @include('partials.tile', ['n' => $s['aud_gain'] >= 0 ? 'trend' : 'trend-down', 'tone' => $s['aud_gain'] >= 0 ? 'violet' : 'amber', 'class' => 'tile-lg'])
+                <div>
+                    <div class="stat-k">Kurs AUD</div>
+                    <div class="stat-v num {{ $s['aud'] > 0 ? ($s['aud_gain'] >= 0 ? 'text-green' : 'text-red') : '' }}">{{ $s['aud'] > 0 ? ($s['aud_gain'] >= 0 ? '+' : '').rupiah_short($s['aud_gain']) : '—' }}</div>
+                    <div class="stat-s">{{ $s['aud'] > 0 ? 'Modal rata-rata '.rate_fmt($s['aud_avg_rate']) : 'Belum ada AUD' }}</div>
                 </div>
             </div>
-            <div class="card card-tight">
-                <div class="stat">
-                    <div class="stat-icon">📊</div>
-                    <div><div class="stat-k">Rata-rata/bulan</div><div class="stat-v num">{{ rupiah_short($s['avg_monthly']) }}</div><div class="stat-s">6 bulan terakhir</div></div>
-                </div>
-            </div>
-            <div class="card card-tight">
-                <div class="stat">
-                    <div class="stat-icon">🐨</div>
-                    <div>
-                        <div class="stat-k">Untung/rugi kurs AUD</div>
-                        <div class="stat-v num {{ $s['aud_gain'] >= 0 ? 'text-green' : 'text-red' }}">{{ $s['aud'] > 0 ? rupiah_short($s['aud_gain']) : '—' }}</div>
-                        <div class="stat-s">{{ $s['aud'] > 0 ? 'Rata-rata beli Rp '.rate_fmt($s['aud_avg_rate']) : 'Belum ada AUD' }}</div>
-                    </div>
-                </div>
-            </div>
-            <div class="card card-tight">
-                <div class="stat">
-                    <div class="stat-icon">🔥</div>
-                    <div><div class="stat-k">Streak nabung</div><div class="stat-v num">{{ $s['streak'] }} bulan</div><div class="stat-s">{{ $s['deposit_count'] }}× setoran total</div></div>
-                </div>
+            <div class="card">
+                @include('partials.tile', ['n' => 'flame', 'tone' => 'amber', 'class' => 'tile-lg'])
+                <div><div class="stat-k">Streak</div><div class="stat-v num">{{ $s['streak'] }} bulan</div><div class="stat-s">{{ $s['deposit_count'] }}× setoran</div></div>
             </div>
         </div>
 
         {{-- CHART --}}
         <div class="card">
             <div class="card-head">
-                <h3>Perjalanan tabungan</h3>
+                <h3>@include('partials.tile', ['n' => 'chart']) Perjalanan tabungan</h3>
                 <div class="tabs" data-chart-tabs>
                     <a href="#" class="active" data-mode="flow">Arus bulanan</a>
                     <a href="#" data-mode="balance">Saldo</a>
@@ -97,8 +90,8 @@
         {{-- RECENT --}}
         <div class="card">
             <div class="card-head">
-                <h3>Transaksi terakhir</h3>
-                <a href="{{ route('transactions.index') }}">Lihat semua →</a>
+                <h3>@include('partials.tile', ['n' => 'list']) Transaksi terakhir</h3>
+                <a href="{{ route('transactions.index') }}" class="card-link">Lihat semua @include('partials.icon', ['n' => 'chev'])</a>
             </div>
             @if ($recent->isEmpty())
                 <div class="empty">
@@ -121,10 +114,10 @@
         {{-- INSIGHTS --}}
         @if (count($insights))
             <div class="card card-pink">
-                <div class="card-head"><h3>💡 Catatan untukmu</h3></div>
+                <div class="card-head"><h3>@include('partials.tile', ['n' => 'bulb']) Catatan untukmu</h3></div>
                 <div class="stack" style="gap:10px">
                     @foreach ($insights as $i)
-                        <div class="insight"><span class="ic">{{ $i['icon'] }}</span><span>{{ $i['text'] }}</span></div>
+                        <div class="insight">@include('partials.tile', ['n' => $i['icon'], 'tone' => $i['tone'] ?? 'pink'])<span>{{ $i['text'] }}</span></div>
                     @endforeach
                 </div>
             </div>
@@ -133,8 +126,8 @@
         {{-- GOALS --}}
         <div class="card">
             <div class="card-head">
-                <h3>🎯 Target aktif <span class="muted small">({{ $goalCount }})</span></h3>
-                <a href="{{ route('goals.index') }}">Semua →</a>
+                <h3>@include('partials.tile', ['n' => 'target']) Target aktif <span class="count">{{ $goalCount }}</span></h3>
+                <a href="{{ route('goals.index') }}" class="card-link">Semua @include('partials.icon', ['n' => 'chev'])</a>
             </div>
             @forelse ($goals as $g)
                 @php $p = $g->progress_cache; @endphp
@@ -144,7 +137,7 @@
                         <div class="bold ellipsis">{{ $g->emoji }} {{ $g->name }}</div>
                         <div class="small muted num">{{ money($p['saved'], $g->target_currency) }} / {{ money($g->target_amount, $g->target_currency) }}</div>
                         <div class="xs muted">
-                            @if ($g->is_shared)💑 Bersama · @endif
+                            @if ($g->is_shared)Bersama · @endif
                             @if ($p['days_left'] !== null) {{ $p['days_left'] >= 0 ? $p['days_left'].' hari lagi' : 'lewat '.abs($p['days_left']).' hari' }} @else tanpa tenggat @endif
                         </div>
                     </div>
@@ -159,19 +152,18 @@
                 </div>
             @endforelse
             @if ($goals->isNotEmpty())
-                <a href="{{ route('goals.create') }}" class="btn btn-soft btn-block mt-3">+ Target baru</a>
+                <a href="{{ route('goals.create') }}" class="btn btn-soft btn-block mt-3">@include('partials.icon', ['n' => 'plus']) Target baru</a>
             @endif
         </div>
 
         {{-- COMPOSITION --}}
         <div class="card">
-            <div class="card-head"><h3>🧺 Disimpan di mana?</h3></div>
+            <div class="card-head"><h3>@include('partials.tile', ['n' => 'pie']) Disimpan di mana</h3></div>
             @if (empty($s['composition']))
                 <p class="muted small">Belum ada saldo.</p>
             @else
                 <div class="chart-box sm"><canvas id="compChart"></canvas></div>
                 <div class="legend mt-3">
-                    @php $palette = ['#ec4899', '#f9a8d4', '#a855f7', '#fb7185', '#f59e0b', '#14b8a6', '#db2777', '#c084fc']; @endphp
                     @foreach ($s['composition'] as $idx => $c)
                         <div class="row-between">
                             <div class="row" style="gap:8px"><span class="dot" style="background: {{ $palette[$idx % 8] }}"></span>{{ $c['label'] }}</div>
@@ -184,9 +176,12 @@
 
         {{-- AUD DETAIL --}}
         <div class="card">
-            <div class="card-head"><h3>🇦🇺 Celengan AUD</h3><a href="{{ route('rates.index') }}">Kurs →</a></div>
-            <div class="kv"><span class="k">Jumlah AUD dipegang</span><span class="v num">{{ aud($s['aud']) }}</span></div>
-            <div class="kv"><span class="k">Modal (saat beli/setor)</span><span class="v num">{{ rupiah($s['aud_cost_idr']) }}</span></div>
+            <div class="card-head">
+                <h3>@include('partials.tile', ['n' => 'globe', 'tone' => 'violet']) Celengan AUD</h3>
+                <a href="{{ route('rates.index') }}" class="card-link">Kurs @include('partials.icon', ['n' => 'chev'])</a>
+            </div>
+            <div class="kv"><span class="k">AUD dipegang</span><span class="v num">{{ aud($s['aud']) }}</span></div>
+            <div class="kv"><span class="k">Modal (saat setor/beli)</span><span class="v num">{{ rupiah($s['aud_cost_idr']) }}</span></div>
             <div class="kv"><span class="k">Nilai hari ini</span><span class="v num">{{ rupiah($s['aud_value_idr']) }}</span></div>
             <div class="kv"><span class="k">Selisih kurs</span><span class="v num {{ $s['aud_gain'] >= 0 ? 'text-green' : 'text-red' }}">{{ rupiah($s['aud_gain'], true) }} ({{ number_format($s['aud_gain_pct'], 2, ',', '.') }}%)</span></div>
             <div class="kv"><span class="k">Porsi dari total</span><span class="v num">{{ number_format($s['aud_share'], 1, ',', '.') }}%</span></div>

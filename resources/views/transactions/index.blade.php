@@ -29,8 +29,8 @@
         </select>
         <select name="currency" class="input" onchange="this.form.submit()">
             <option value="">IDR & AUD</option>
-            <option value="IDR" @selected($filters['currency'] === 'IDR')>🇮🇩 IDR</option>
-            <option value="AUD" @selected($filters['currency'] === 'AUD')>🇦🇺 AUD</option>
+            <option value="IDR" @selected($filters['currency'] === 'IDR')>IDR</option>
+            <option value="AUD" @selected($filters['currency'] === 'AUD')>AUD</option>
         </select>
         <input type="search" name="q" value="{{ $filters['search'] }}" class="input grow" placeholder="Cari catatan…">
         <button class="btn btn-soft">@include('partials.icon', ['n' => 'search']) Cari</button>
@@ -41,15 +41,15 @@
 </div>
 
 <div class="grid g-3 mb-3">
-    <div class="card card-tight"><div class="stat"><div class="stat-icon">⬇️</div><div><div class="stat-k">Total setor</div><div class="stat-v num text-green">{{ rupiah($totalIn) }}</div></div></div></div>
-    <div class="card card-tight"><div class="stat"><div class="stat-icon">⬆️</div><div><div class="stat-k">Total tarik</div><div class="stat-v num text-red">{{ rupiah($totalOut) }}</div></div></div></div>
-    <div class="card card-tight"><div class="stat"><div class="stat-icon">🧮</div><div><div class="stat-k">Bersih</div><div class="stat-v num">{{ rupiah($totalIn - $totalOut, true) }}</div><div class="stat-s">nilai rupiah saat transaksi</div></div></div></div>
+    <div class="card card-tight"><div class="stat">@include('partials.tile', ['n' => 'arrow-down', 'tone' => 'green'])<div><div class="stat-k">Total setor</div><div class="stat-v num text-green">{{ rupiah($totalIn) }}</div></div></div></div>
+    <div class="card card-tight"><div class="stat">@include('partials.tile', ['n' => 'arrow-up', 'tone' => 'red'])<div><div class="stat-k">Total tarik</div><div class="stat-v num text-red">{{ rupiah($totalOut) }}</div></div></div></div>
+    <div class="card card-tight"><div class="stat">@include('partials.tile', ['n' => 'calc'])<div><div class="stat-k">Bersih</div><div class="stat-v num">{{ rupiah($totalIn - $totalOut, true) }}</div><div class="stat-s">nilai rupiah saat transaksi</div></div></div></div>
 </div>
 
 <div class="card">
     @if ($transactions->isEmpty())
         <div class="empty">
-            <div class="ill">🔍</div>
+            <div class="ill">🔎</div>
             <h4>Tidak ada transaksi</h4>
             <p>Coba ubah filter, atau catat transaksi baru.</p>
         </div>

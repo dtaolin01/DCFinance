@@ -422,3 +422,131 @@ details.menu .menu-body a:hover, details.menu .menu-body button:hover { backgrou
 .stats .stat { flex-direction: column; gap: 10px; }
 .stats .stat-icon { width: 40px; height: 40px; font-size: 19px; border-radius: 13px; }
 .stats .stat-v { font-size: 19px; white-space: nowrap; }
+
+/* =========================================================
+   v2 — perapihan: ikon konsisten, label mata uang, tata letak
+   ========================================================= */
+h1, h2, h3 { font-weight: 750; }
+.page-head { margin-bottom: 24px; }
+.page-head h1 { font-size: 24px; letter-spacing: -.02em; }
+.page-head p { font-size: 14px; }
+.back-link { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.back-link svg { width: 15px; height: 15px; }
+
+.card { padding: 24px; }
+.card-tight { padding: 18px; }
+.card-head { margin-bottom: 18px; min-height: 32px; }
+.card-head h3 { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 750; }
+.card-head .count { font-size: 12px; font-weight: 700; color: var(--ink-3); background: #f8f1f5; padding: 2px 8px; border-radius: 999px; }
+.card-link { display: inline-flex; align-items: center; gap: 2px; font-size: 13px; font-weight: 700; }
+.card-link svg { width: 15px; height: 15px; }
+
+/* Ikon dalam kotak berwarna */
+.tile { width: 32px; height: 32px; border-radius: 10px; display: inline-grid; place-items: center; flex: none; background: var(--pink-50); color: var(--pink-600); }
+.tile svg { width: 17px; height: 17px; }
+.tile-lg { width: 42px; height: 42px; border-radius: 13px; }
+.tile-lg svg { width: 21px; height: 21px; }
+.tile-green { background: var(--green-bg); color: #059669; }
+.tile-red { background: var(--red-bg); color: #e11d48; }
+.tile-violet { background: #f5f0ff; color: #7e22ce; }
+.tile-amber { background: var(--amber-bg); color: #b45309; }
+.tile-gray { background: #f7f2f5; color: var(--ink-2); }
+.tile-white { background: rgba(255, 255, 255, .2); color: #fff; }
+
+/* Label mata uang (pengganti emoji bendera) */
+.cur { display: inline-flex; align-items: center; justify-content: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em; line-height: 1; vertical-align: middle; flex: none; }
+.cur-idr { background: #fff0f3; color: #e11d48; }
+.cur-aud { background: #eef4ff; color: #1d4ed8; }
+.hero .cur { background: rgba(255, 255, 255, .25); color: #fff; }
+
+.badge { white-space: nowrap; line-height: 1.5; }
+.badge svg { width: 12px; height: 12px; }
+.badge-sm { padding: 1px 8px; font-size: 11.5px; }
+
+/* Stat */
+.stats .card { display: flex; flex-direction: column; gap: 12px; }
+.stats .stat-k { font-size: 12.5px; }
+.stats .stat-v { font-size: 19px; }
+.stats .stat-s { font-size: 12px; }
+
+/* Hero */
+.hero { padding: 26px 28px; }
+.hero .label { display: flex; align-items: center; gap: 8px; }
+.hero-box { display: flex; flex-direction: column; justify-content: center; min-height: 74px; }
+.hero-box .k { display: flex; align-items: center; gap: 6px; }
+
+/* Insight */
+.insight { align-items: center; padding: 12px; gap: 12px; background: #fff; border-color: var(--line); line-height: 1.45; }
+.insight .tile { width: 34px; height: 34px; }
+
+/* Transaksi */
+.tx { padding: 14px 0; gap: 14px; }
+.tx-icon { width: 40px; height: 40px; border-radius: 12px; color: var(--pink-600); }
+.tx-icon svg { width: 19px; height: 19px; }
+.tx-icon.in { color: #059669; }
+.tx-icon.out { color: #e11d48; }
+.tx-icon.ex { color: #7e22ce; }
+.tx-title { font-size: 14.5px; display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tx-title .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-meta { margin-top: 2px; gap: 4px 8px; }
+.tx-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-3); opacity: .6; }
+.tx-amt { font-size: 14.5px; }
+.tx-amt .s { margin-top: 1px; }
+.tx-actions { opacity: 0; transition: opacity .15s; }
+.tx:hover .tx-actions, .tx:focus-within .tx-actions { opacity: 1; }
+@media (hover: none) { .tx-actions { opacity: 1; } }
+.day-head { font-size: 11.5px; letter-spacing: .06em; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+
+/* Target */
+.goal-card { display: flex; flex-direction: column; }
+.goal-card .goal-top { display: flex; gap: 14px; align-items: center; }
+.goal-card .goal-name { font-size: 15.5px; font-weight: 750; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.goal-card .goal-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); }
+.goal-card .goal-meta svg { width: 13px; height: 13px; }
+.goal-card .goal-foot { margin-top: auto; padding-top: 18px; }
+.goal-emoji { width: 46px; height: 46px; border-radius: 14px; font-size: 23px; }
+.goal-mini { padding: 14px 0; }
+.ring { width: 56px; height: 56px; }
+.ring > div { width: 44px; height: 44px; font-size: 12px; }
+.ring-lg { width: 150px; height: 150px; }
+.ring-lg > div { width: 122px; height: 122px; font-size: 30px; }
+
+/* Berdua */
+.people { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.person-card { position: relative; overflow: hidden; }
+.person-card::before { content: ''; position: absolute; inset: 0 0 auto 0; height: 4px; background: var(--c, var(--pink-500)); }
+
+/* Seg & form */
+.seg span .cur { height: 18px; }
+.kv .k { display: flex; align-items: center; gap: 8px; }
+.list-tips { padding: 0; margin: 0; list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.list-tips li { display: flex; gap: 10px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
+.list-tips li .tile { width: 26px; height: 26px; border-radius: 8px; }
+.list-tips li .tile svg { width: 14px; height: 14px; }
+
+/* Sidebar */
+.nav a { padding: 10px 14px; font-size: 14.5px; }
+.rate-chip .cur { height: 22px; }
+.sidebar .btn-block { margin-bottom: 2px; }
+
+@media (max-width: 900px) {
+    .people { grid-template-columns: 1fr; }
+    .hero { padding: 22px; }
+}
+@media (max-width: 560px) {
+    .stats .card { padding: 16px; }
+    .tx-amt .s { display: none; }
+}
+.hero .label { color: #fff; margin-bottom: 0; font-size: 14px; }
+.stats .stat-k { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 1100px) { .g-main { grid-template-columns: minmax(0, 1fr); } }
+.main, .container, .stack, .grid > * { min-width: 0; }
+@media (max-width: 560px) {
+    .hero-actions { gap: 8px; }
+    .hero-actions .btn { flex: 1 1 0; min-width: 0; padding: 11px 8px; font-size: 13.5px; }
+    .hero-actions .btn svg { width: 16px; height: 16px; }
+    .hero .big { font-size: 30px; }
+    .hero-box .v { font-size: 15.5px; }
+}
+.seg label { min-width: 0; }
+.seg span { flex-wrap: wrap; row-gap: 4px; }

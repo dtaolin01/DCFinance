@@ -11,15 +11,15 @@ return [
     'rate_cache_minutes' => (int) env('DC_RATE_CACHE_MINUTES', 180),
 
     'currencies' => [
-        'IDR' => ['label' => 'Rupiah', 'symbol' => 'Rp', 'flag' => '🇮🇩', 'decimals' => 0],
-        'AUD' => ['label' => 'Dolar Australia', 'symbol' => 'A$', 'flag' => '🇦🇺', 'decimals' => 2],
+        'IDR' => ['label' => 'Rupiah', 'symbol' => 'Rp', 'decimals' => 0],
+        'AUD' => ['label' => 'Dolar Australia', 'symbol' => 'A$', 'decimals' => 2],
     ],
 
     'methods' => [
-        'cash' => ['label' => 'Cash', 'icon' => '💵'],
-        'bank' => ['label' => 'Rekening Bank', 'icon' => '🏦'],
-        'ewallet' => ['label' => 'E-Wallet', 'icon' => '📱'],
-        'other' => ['label' => 'Lainnya', 'icon' => '🪙'],
+        'cash' => ['label' => 'Cash', 'icon' => 'cash'],
+        'bank' => ['label' => 'Rekening Bank', 'icon' => 'bank'],
+        'ewallet' => ['label' => 'E-Wallet', 'icon' => 'phone'],
+        'other' => ['label' => 'Lainnya', 'icon' => 'coins'],
     ],
 
     'colors' => ['#ec4899', '#f472b6', '#db2777', '#e879f9', '#fb7185', '#a855f7', '#f59e0b', '#14b8a6'],

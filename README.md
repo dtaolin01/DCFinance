@@ -17,15 +17,14 @@ Aplikasi web (Laravel 12) untuk mencatat tabungan **kamu dan pasangan secara ter
 
 ## 🚀 Menjalankan di lokal
 
-Butuh PHP ≥ 8.2 (ekstensi: pdo_sqlite/pdo_mysql, mbstring, openssl, curl) dan Composer.
+Butuh PHP ≥ 8.2 (ekstensi: pdo_mysql, mbstring, openssl, curl), Composer, dan MySQL ≥ 5.7 / MariaDB ≥ 10.3.
 
 ```bash
 git clone https://github.com/dtaolin01/DCFinance.git
 cd DCFinance
 composer install
-cp .env.example .env
+cp .env.example .env          # lalu isi DB_DATABASE, DB_USERNAME, DB_PASSWORD
 php artisan key:generate
-touch database/database.sqlite
 php artisan migrate
 php artisan serve
 ```
@@ -69,6 +68,8 @@ Setelah mengubah `.env`, jalankan `php artisan config:clear` (atau `config:cache
 
 ### VPS
 Sama seperti di atas; arahkan root Nginx/Apache ke `public/`, gunakan PHP-FPM.
+
+> ⚠️ Repo ini **publik**. Jangan pernah commit file `.env` (sudah diabaikan oleh `.gitignore`) — kredensial database hanya ditulis di `.env` di server.
 
 ## ⚙️ Pengaturan (`.env`)
 

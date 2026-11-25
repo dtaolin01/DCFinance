@@ -7,7 +7,7 @@
 @endphp
 <div class="page-head">
     <div>
-        <h1>Kurs AUD 🇦🇺</h1>
+        <h1>Kurs AUD</h1>
         <p>Dipakai untuk merupiahkan tabungan AUD-mu.</p>
     </div>
     <form method="POST" action="{{ route('rates.refresh') }}" class="page-actions">@csrf
@@ -35,7 +35,7 @@
         </div>
 
         <div class="card" data-converter data-rate="{{ $rate['rate'] }}">
-            <div class="card-head"><h3>🧮 Konverter</h3></div>
+            <div class="card-head"><h3>@include('partials.tile', ['n' => 'calc']) Konverter</h3></div>
             <div class="grid g-2" style="gap:14px">
                 <div class="field">
                     <label>AUD</label>
@@ -52,7 +52,7 @@
     <div class="stack">
         <form method="POST" action="{{ route('rates.update') }}" class="card form">
             @csrf @method('PUT')
-            <div class="card-head" style="margin-bottom:0"><h3>✍️ Kurs manual</h3></div>
+            <div class="card-head" style="margin-bottom:0"><h3>@include('partials.tile', ['n' => 'edit']) Kurs manual</h3></div>
             <p class="small muted">Pakai kurs sendiri (mis. kurs money changer langgananmu) untuk semua perhitungan. Berlaku untuk kalian berdua.</p>
             <label class="check">
                 <input type="checkbox" name="enabled" value="1" @checked(old('enabled', $manual['enabled'] ?? false))>
@@ -69,12 +69,12 @@
         </form>
 
         <div class="card">
-            <h3 style="font-size:15px">ℹ️ Cara kerja kurs</h3>
-            <ul class="small muted" style="padding-left:18px;margin:10px 0 0;display:flex;flex-direction:column;gap:6px">
-                <li>Kurs online diambil otomatis & disimpan {{ config('dcfinance.rate_cache_minutes') }} menit.</li>
-                <li>Setiap setoran AUD menyimpan <b>kurs saat itu</b> — jadi modal AUD-mu tetap tercatat.</li>
-                <li><b>Total tabungan</b> menilai AUD dengan kurs hari ini, sehingga terlihat untung/rugi kursnya.</li>
-                @if ($last)<li>Kurs online terakhir: Rp {{ rate_fmt($last['rate']) }} ({{ $last['source'] ?? '-' }}).</li>@endif
+            <div class="card-head"><h3>@include('partials.tile', ['n' => 'info']) Cara kerja kurs</h3></div>
+            <ul class="list-tips">
+                <li>@include('partials.tile', ['n' => 'refresh'])<span>Kurs online diambil otomatis & disimpan {{ config('dcfinance.rate_cache_minutes') }} menit.</span></li>
+                <li>@include('partials.tile', ['n' => 'lock'])<span>Setiap setoran AUD menyimpan <b>kurs saat itu</b>, jadi modal AUD-mu tetap tercatat.</span></li>
+                <li>@include('partials.tile', ['n' => 'trend'])<span><b>Total tabungan</b> menilai AUD dengan kurs hari ini, sehingga terlihat untung/rugi kursnya.</span></li>
+                @if ($last)<li>@include('partials.tile', ['n' => 'clock'])<span>Kurs online terakhir: Rp {{ rate_fmt($last['rate']) }} ({{ $last['source'] ?? '-' }}).</span></li>@endif
             </ul>
         </div>
     </div>

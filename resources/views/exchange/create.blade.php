@@ -5,7 +5,7 @@
 @php $dir = old('direction', 'IDR_AUD'); @endphp
 <div class="page-head">
     <div>
-        <h1>Tukar uang 💱</h1>
+        <h1>Tukar uang</h1>
         <p>Pindahkan tabungan Rupiah ke AUD cash (atau sebaliknya). Tidak dihitung sebagai setor/tarik.</p>
     </div>
 </div>
@@ -16,8 +16,8 @@
         <div class="field">
             <span class="label">Arah tukar</span>
             <div class="seg">
-                <label><input type="radio" name="direction" value="IDR_AUD" @checked($dir === 'IDR_AUD')><span>🇮🇩 → 🇦🇺 Beli AUD</span></label>
-                <label><input type="radio" name="direction" value="AUD_IDR" @checked($dir === 'AUD_IDR')><span>🇦🇺 → 🇮🇩 Jual AUD</span></label>
+                <label><input type="radio" name="direction" value="IDR_AUD" @checked($dir === 'IDR_AUD')><span>@include('partials.cur', ['c' => 'IDR']) → @include('partials.cur', ['c' => 'AUD']) Beli AUD</span></label>
+                <label><input type="radio" name="direction" value="AUD_IDR" @checked($dir === 'AUD_IDR')><span>@include('partials.cur', ['c' => 'AUD']) → @include('partials.cur', ['c' => 'IDR']) Jual AUD</span></label>
             </div>
         </div>
 
@@ -41,7 +41,7 @@
         </div>
 
         <div class="convert-box">
-            <span style="font-size:26px">🧾</span>
+            @include('partials.tile', ['n' => 'calc', 'tone' => 'violet'])
             <div><div class="small muted">Kurs efektif transaksi ini (per 1 AUD)</div><div class="big num" data-effective>—</div></div>
         </div>
 
@@ -50,7 +50,7 @@
                 <label for="method_from">Diambil dari</label>
                 <select id="method_from" name="method_from" class="input">
                     @foreach (config('dcfinance.methods') as $key => $m)
-                        <option value="{{ $key }}" @selected(old('method_from', 'bank') === $key)>{{ $m['icon'] }} {{ $m['label'] }}</option>
+                        <option value="{{ $key }}" @selected(old('method_from', 'bank') === $key)>{{ $m['label'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -58,7 +58,7 @@
                 <label for="method_to">Disimpan ke</label>
                 <select id="method_to" name="method_to" class="input">
                     @foreach (config('dcfinance.methods') as $key => $m)
-                        <option value="{{ $key }}" @selected(old('method_to', 'cash') === $key)>{{ $m['icon'] }} {{ $m['label'] }}</option>
+                        <option value="{{ $key }}" @selected(old('method_to', 'cash') === $key)>{{ $m['label'] }}</option>
                     @endforeach
                 </select>
             </div>
@@ -78,7 +78,7 @@
 
     <div class="stack">
         <div class="card card-pink" data-converter data-rate="{{ $rate['rate'] }}">
-            <div class="card-head"><h3>🧮 Kalkulator cepat</h3></div>
+            <div class="card-head"><h3>@include('partials.tile', ['n' => 'calc']) Kalkulator cepat</h3></div>
             <div class="field">
                 <label>AUD</label>
                 <div class="input-money sm"><span class="prefix">A$</span><input name="conv_aud" class="input num" inputmode="decimal" data-money data-currency="AUD" placeholder="0"></div>
@@ -91,8 +91,8 @@
             <div class="hint">Kurs: Rp {{ rate_fmt($rate['rate']) }} ({{ $rate['source'] }})</div>
         </div>
         <div class="card">
-            <div class="kv"><span class="k">Saldo Rupiah</span><span class="v num">{{ rupiah($balances['IDR']) }}</span></div>
-            <div class="kv"><span class="k">Saldo AUD</span><span class="v num">{{ aud($balances['AUD']) }}</span></div>
+            <div class="kv"><span class="k">@include('partials.cur', ['c' => 'IDR']) Saldo Rupiah</span><span class="v num">{{ rupiah($balances['IDR']) }}</span></div>
+            <div class="kv"><span class="k">@include('partials.cur', ['c' => 'AUD']) Saldo AUD</span><span class="v num">{{ aud($balances['AUD']) }}</span></div>
         </div>
     </div>
 </div>

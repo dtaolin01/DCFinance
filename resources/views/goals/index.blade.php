@@ -4,7 +4,7 @@
 @section('content')
 <div class="page-head">
     <div>
-        <h1>Target tabungan 🎯</h1>
+        <h1>Target tabungan</h1>
         <p>Mimpi yang dicicil sedikit-sedikit.</p>
     </div>
     <div class="page-actions">
@@ -46,7 +46,7 @@
 @endif
 
 @if ($achieved->isNotEmpty())
-    <h3 class="mt-4 mb-2" style="font-size:17px">🏆 Sudah tercapai</h3>
+    <h3 class="mt-4 mb-2 row" style="font-size:16px">@include('partials.tile', ['n' => 'trophy', 'tone' => 'green']) Sudah tercapai</h3>
     <div class="grid g-3">
         @foreach ($achieved as $g)
             @include('partials.goal-card', ['g' => $g])

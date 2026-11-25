@@ -4,7 +4,7 @@
 @section('content')
 <div class="page-head">
     <div>
-        <h1>Profil {{ $user->emoji }}</h1>
+        <h1>Profil</h1>
         <p>Atur nama, warna, dan target menabung bulananmu.</p>
     </div>
 </div>
@@ -57,7 +57,7 @@
 
     <form method="POST" action="{{ route('profile.password') }}" class="card form" style="align-self:start">
         @csrf @method('PUT')
-        <div class="card-head" style="margin-bottom:0"><h3>🔒 Ganti kata sandi</h3></div>
+        <div class="card-head" style="margin-bottom:0"><h3>@include('partials.tile', ['n' => 'lock']) Ganti kata sandi</h3></div>
         <div class="field">
             <label for="current_password">Kata sandi lama</label>
             <input id="current_password" type="password" name="current_password" class="input @error('current_password') is-invalid @enderror" required autocomplete="current-password">

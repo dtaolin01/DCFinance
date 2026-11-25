@@ -208,23 +208,23 @@ class SavingsCalculator
         if ($s['month_net'] > 0 && $s['prev_net'] > 0 && $s['month_change_pct'] !== null) {
             $pct = round($s['month_change_pct']);
             $out[] = $pct >= 0
-                ? ['icon' => '📈', 'text' => "Tabungan bersih bulan ini naik {$pct}% dibanding bulan lalu. Mantap!"]
-                : ['icon' => '🌱', 'text' => 'Bulan ini baru '.rupiah($s['month_net']).', bulan lalu '.rupiah($s['prev_net']).'. Masih ada waktu buat ngejar!'];
+                ? ['icon' => 'trend', 'tone' => 'green', 'text' => "Tabungan bersih bulan ini naik {$pct}% dibanding bulan lalu. Mantap!"]
+                : ['icon' => 'leaf', 'tone' => 'amber', 'text' => 'Bulan ini baru '.rupiah($s['month_net']).', bulan lalu '.rupiah($s['prev_net']).'. Masih ada waktu buat ngejar!'];
         } elseif ($s['month_net'] <= 0 && $s['deposit_count'] > 0) {
-            $out[] = ['icon' => '💌', 'text' => 'Belum ada tabungan bersih bulan ini. Yuk setor walau sedikit!'];
+            $out[] = ['icon' => 'bell', 'tone' => 'pink', 'text' => 'Belum ada tabungan bersih bulan ini. Yuk setor walau sedikit!'];
         }
 
         if ($s['monthly_target'] > 0) {
             $left = $s['monthly_target'] - max($s['month_net'], 0);
             $out[] = $left > 0
-                ? ['icon' => '🎯', 'text' => 'Kurang '.rupiah($left).' lagi untuk target bulanan '.rupiah($s['monthly_target']).'.']
-                : ['icon' => '🏆', 'text' => 'Target bulanan '.rupiah($s['monthly_target']).' sudah tercapai!'];
+                ? ['icon' => 'target', 'tone' => 'pink', 'text' => 'Kurang '.rupiah($left).' lagi untuk target bulanan '.rupiah($s['monthly_target']).'.']
+                : ['icon' => 'trophy', 'tone' => 'green', 'text' => 'Target bulanan '.rupiah($s['monthly_target']).' sudah tercapai!'];
         }
 
         if ($s['aud'] > 0.009 && $s['aud_cost_idr'] > 0) {
             $out[] = $s['aud_gain'] >= 0
-                ? ['icon' => '🐨', 'text' => 'Kurs AUD sekarang Rp '.rate_fmt($s['rate']).', di atas rata-rata belimu (Rp '.rate_fmt($s['aud_avg_rate']).'). Nilai AUD-mu untung '.rupiah($s['aud_gain']).'.']
-                : ['icon' => '🐨', 'text' => 'Kurs AUD sekarang Rp '.rate_fmt($s['rate']).', di bawah rata-rata belimu (Rp '.rate_fmt($s['aud_avg_rate']).'). Selisihnya '.rupiah($s['aud_gain']).' — belum rugi selama belum ditukar.'];
+                ? ['icon' => 'trend', 'tone' => 'green', 'text' => 'Kurs AUD sekarang Rp '.rate_fmt($s['rate']).', di atas rata-rata belimu (Rp '.rate_fmt($s['aud_avg_rate']).'). Nilai AUD-mu untung '.rupiah($s['aud_gain']).'.']
+                : ['icon' => 'trend-down', 'tone' => 'amber', 'text' => 'Kurs AUD sekarang Rp '.rate_fmt($s['rate']).', di bawah rata-rata belimu (Rp '.rate_fmt($s['aud_avg_rate']).'). Selisihnya '.rupiah($s['aud_gain']).' — belum rugi selama belum ditukar.'];
         }
 
         foreach ($goals as $g) {
@@ -232,12 +232,12 @@ class SavingsCalculator
             if (! $p || $p['done'] || ! $p['per_month']) {
                 continue;
             }
-            $out[] = ['icon' => $g->emoji, 'text' => "Untuk \"{$g->name}\" tepat waktu, sisihkan ".money($p['per_month'], $g->target_currency).' per bulan.'];
+            $out[] = ['icon' => 'calendar', 'tone' => 'violet', 'text' => "Untuk \"{$g->name}\" tepat waktu, sisihkan ".money($p['per_month'], $g->target_currency).' per bulan.'];
             break;
         }
 
         if ($s['streak'] >= 2) {
-            $out[] = ['icon' => '🔥', 'text' => "{$s['streak']} bulan berturut-turut tabunganmu bertambah. Pertahankan!"];
+            $out[] = ['icon' => 'flame', 'tone' => 'amber', 'text' => "{$s['streak']} bulan berturut-turut tabunganmu bertambah. Pertahankan!"];
         }
 
         return array_slice($out, 0, 4);

@@ -81,10 +81,10 @@ class Transaction extends Model
     public function icon(): string
     {
         if ($this->isExchange()) {
-            return '💱';
+            return 'swap';
         }
 
-        return config("dcfinance.methods.{$this->method}.icon", '🪙');
+        return config("dcfinance.methods.{$this->method}.icon", 'coins');
     }
 
     public function methodLabel(): string

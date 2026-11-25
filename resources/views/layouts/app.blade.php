@@ -44,7 +44,7 @@
         <div class="sidebar-foot">
             <a href="{{ route('transactions.create') }}" class="btn btn-primary btn-block">@include('partials.icon', ['n' => 'plus']) Catat Tabungan</a>
             <a href="{{ route('rates.index') }}" class="rate-chip">
-                <span class="flag">🇦🇺</span>
+                @include('partials.cur', ['c' => 'AUD'])
                 <div>
                     <div class="xs muted">1 AUD hari ini</div>
                     <div class="bold num">Rp {{ rate_fmt($globalRate['rate']) }}</div>
@@ -74,10 +74,10 @@
                 <summary><div class="avatar" style="background: {{ $me->color }}22">{{ $me->emoji }}</div></summary>
                 <div class="menu-body">
                     <div style="padding:8px 12px 10px"><div class="bold">{{ $me->display_name }}</div><div class="xs muted">1 AUD = Rp {{ rate_fmt($globalRate['rate']) }}</div></div>
-                    <a href="{{ route('exchange.create') }}">💱 Tukar Uang</a>
-                    <a href="{{ route('rates.index') }}">🇦🇺 Kurs AUD</a>
-                    <a href="{{ route('profile.edit') }}">🌸 Profil</a>
-                    <form method="POST" action="{{ route('logout') }}">@csrf<button>🚪 Keluar</button></form>
+                    <a href="{{ route('exchange.create') }}">@include('partials.icon', ['n' => 'swap']) Tukar Uang</a>
+                    <a href="{{ route('rates.index') }}">@include('partials.icon', ['n' => 'globe']) Kurs AUD</a>
+                    <a href="{{ route('profile.edit') }}">@include('partials.icon', ['n' => 'user']) Profil</a>
+                    <form method="POST" action="{{ route('logout') }}">@csrf<button>@include('partials.icon', ['n' => 'logout']) Keluar</button></form>
                 </div>
             </details>
         </header>

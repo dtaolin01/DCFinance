@@ -4,49 +4,53 @@
 @section('content')
 <div class="page-head">
     <div>
-        <h1>Kita berdua 💑</h1>
-        <p>Tabungan masing-masing tetap terpisah — ini cuma intip progres bareng.</p>
+        <h1>Kita berdua</h1>
+        <p>Tabungan masing-masing tetap terpisah — di sini kalian bisa lihat progres bareng.</p>
     </div>
 </div>
 
 <div class="card hero mb-3">
-    <div class="label">Gabungan tabungan kalian</div>
+    <div class="label">@include('partials.tile', ['n' => 'heart', 'tone' => 'white']) Gabungan tabungan kalian</div>
     <div class="big num">{{ rupiah($combined['total']) }}</div>
-    <div class="sub">Rupiah {{ rupiah($combined['idr']) }} · AUD {{ aud($combined['aud']) }} · kurs Rp {{ rate_fmt($rate) }}</div>
-    <div class="hero-split" style="grid-template-columns: repeat({{ max($people->count(), 1) }}, minmax(0,1fr))">
-        @foreach ($people as $u)
-            @php $share = $combined['total'] > 0 ? $u->summary['total_idr'] / $combined['total'] * 100 : 0; @endphp
-            <div class="hero-box">
-                <div class="k">{{ $u->emoji }} {{ $u->display_name }}</div>
-                <div class="v num">{{ number_format($share, 0) }}%</div>
-            </div>
-        @endforeach
-    </div>
+    <div class="sub num">Rupiah {{ rupiah($combined['idr']) }} · AUD {{ aud($combined['aud']) }} · kurs Rp {{ rate_fmt($rate) }}</div>
+    @if ($combined['total'] > 0 && $people->count() > 1)
+        <div class="mt-3" style="display:flex;height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.25)">
+            @foreach ($people as $u)
+                <span style="width: {{ $u->summary['total_idr'] / $combined['total'] * 100 }}%; background: {{ $loop->first ? '#fff' : 'rgba(255,255,255,.55)' }}"></span>
+            @endforeach
+        </div>
+        <div class="row-between mt-1 small">
+            @foreach ($people as $u)
+                <span>{{ $u->emoji }} {{ $u->display_name }} · {{ number_format($u->summary['total_idr'] / $combined['total'] * 100, 0) }}%</span>
+            @endforeach
+        </div>
+    @endif
 </div>
 
 @if ($people->count() < 2)
-    <div class="alert mb-3">💌 Pasanganmu belum punya akun. Minta dia daftar di <b>{{ route('register') }}</b> (pendaftaran masih terbuka).</div>
+    <div class="alert mb-3">Pasanganmu belum punya akun. Minta dia daftar di <b>{{ route('register') }}</b> (pendaftaran masih terbuka).</div>
 @endif
 
-<div class="vs mb-3">
-    @foreach ($people as $i => $u)
+<div class="people mb-3">
+    @foreach ($people as $u)
         @php $s = $u->summary; @endphp
-        @if ($i === 1)<div class="heart center">💗</div>@endif
-        <div class="card" style="border-top: 4px solid {{ $u->color }}">
+        <div class="card person-card" style="--c: {{ $u->color }}">
             <div class="row mb-3">
                 <div class="avatar avatar-lg" style="background: {{ $u->color }}22">{{ $u->emoji }}</div>
-                <div>
-                    <h3>{{ $u->display_name }} @if ($u->id === auth()->id())<span class="badge">kamu</span>@endif</h3>
+                <div style="min-width:0">
+                    <h3 class="row" style="gap:8px;font-size:17px">{{ $u->display_name }} @if ($u->id === auth()->id())<span class="badge badge-sm">kamu</span>@endif</h3>
                     <div class="small muted">Menabung sejak {{ $s['first_date'] ? $s['first_date']->translatedFormat('M Y') : '—' }}</div>
                 </div>
             </div>
             <div class="stat-k">Total (dirupiahkan)</div>
             <div class="stat-v num" style="font-size:26px">{{ rupiah($s['total_idr']) }}</div>
-            <div class="kv mt-2"><span class="k">🇮🇩 Rupiah</span><span class="v num">{{ rupiah($s['idr']) }}</span></div>
-            <div class="kv"><span class="k">🇦🇺 AUD cash</span><span class="v num">{{ aud($s['aud']) }}</span></div>
-            <div class="kv"><span class="k">📆 Bulan ini</span><span class="v num {{ $s['month_net'] >= 0 ? 'text-green' : 'text-red' }}">{{ rupiah($s['month_net'], true) }}</span></div>
-            <div class="kv"><span class="k">📊 Rata-rata/bulan</span><span class="v num">{{ rupiah($s['avg_monthly']) }}</span></div>
-            <div class="kv"><span class="k">🔥 Streak</span><span class="v">{{ $s['streak'] }} bulan</span></div>
+            <div class="mt-2">
+                <div class="kv"><span class="k">@include('partials.cur', ['c' => 'IDR']) Rupiah</span><span class="v num">{{ rupiah($s['idr']) }}</span></div>
+                <div class="kv"><span class="k">@include('partials.cur', ['c' => 'AUD']) AUD cash</span><span class="v num">{{ aud($s['aud']) }}</span></div>
+                <div class="kv"><span class="k">Bersih bulan ini</span><span class="v num {{ $s['month_net'] >= 0 ? 'text-green' : 'text-red' }}">{{ rupiah($s['month_net'], true) }}</span></div>
+                <div class="kv"><span class="k">Rata-rata / bulan</span><span class="v num">{{ rupiah($s['avg_monthly']) }}</span></div>
+                <div class="kv"><span class="k">Streak</span><span class="v">{{ $s['streak'] }} bulan</span></div>
+            </div>
             @if ($s['monthly_target'] > 0)
                 <div class="mt-2 small row-between"><span class="muted">Target bulanan {{ rupiah_short($s['monthly_target']) }}</span><span class="bold">{{ round($s['monthly_target_pct']) }}%</span></div>
                 <div class="bar mt-1"><span data-w="{{ round($s['monthly_target_pct']) }}" style="width:0;background: {{ $u->color }}"></span></div>
@@ -57,11 +61,14 @@
 
 <div class="grid g-main">
     <div class="card">
-        <div class="card-head"><h3>📈 Tabungan bersih per bulan</h3></div>
+        <div class="card-head"><h3>@include('partials.tile', ['n' => 'chart']) Tabungan bersih per bulan</h3></div>
         <div class="chart-box"><canvas id="coupleChart"></canvas></div>
     </div>
     <div class="card">
-        <div class="card-head"><h3>💑 Target bersama</h3><a href="{{ route('goals.create') }}">+ Baru</a></div>
+        <div class="card-head">
+            <h3>@include('partials.tile', ['n' => 'users', 'tone' => 'violet']) Target bersama</h3>
+            <a href="{{ route('goals.create') }}" class="card-link">@include('partials.icon', ['n' => 'plus']) Baru</a>
+        </div>
         @forelse ($shared as $g)
             @php $p = $g->progress_cache; @endphp
             <a href="{{ route('goals.show', $g) }}" class="goal-mini">
@@ -69,10 +76,9 @@
                 <div class="grow">
                     <div class="bold ellipsis">{{ $g->emoji }} {{ $g->name }}</div>
                     <div class="small muted num">{{ money($p['saved'], $g->target_currency) }} / {{ money($g->target_amount, $g->target_currency) }}</div>
-                    <div class="row mt-1" style="gap:4px">
+                    <div class="row wrap mt-1" style="gap:4px">
                         @foreach ($people as $u)
-                            @php $v = $p['by_user'][$u->id] ?? 0; @endphp
-                            <span class="badge badge-gray" style="padding:1px 8px">{{ $u->emoji }} {{ rupiah_short($v) }}</span>
+                            <span class="badge badge-sm badge-gray">{{ $u->emoji }} {{ rupiah_short($p['by_user'][$u->id] ?? 0) }}</span>
                         @endforeach
                     </div>
                 </div>

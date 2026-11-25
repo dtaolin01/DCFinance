@@ -3,19 +3,19 @@
     $title = $t->note ?: ($t->isExchange() ? 'Tukar mata uang' : ($t->isInflow() ? 'Setor tabungan' : 'Tarik tabungan'));
 @endphp
 <div class="tx">
-    <div class="tx-icon {{ $cls }}">{{ $t->icon() }}</div>
+    <div class="tx-icon {{ $cls }}">@include('partials.icon', ['n' => $t->icon()])</div>
     <div class="tx-main">
-        <div class="tx-title ellipsis">{{ $title }}</div>
+        <div class="tx-title"><span class="t">{{ $title }}</span></div>
         <div class="tx-meta">
-            @if (! empty($showDate)) <span>{{ $t->date->translatedFormat('d M Y') }}</span> · @endif
-            <span>{{ $t->typeLabel() }}</span> · <span>{{ $t->methodLabel() }}</span>
-            @if ($t->goal) <span class="badge" style="padding:1px 8px">{{ $t->goal->emoji }} {{ \Illuminate\Support\Str::limit($t->goal->name, 18) }}</span>@endif
-            @if (! empty($showUser) && $t->relationLoaded('user')) <span class="badge badge-gray" style="padding:1px 8px">{{ $t->user->emoji }} {{ $t->user->display_name }}</span>@endif
+            @if (! empty($showDate))<span>{{ $t->date->translatedFormat('d M Y') }}</span><span class="sep"></span>@endif
+            <span>{{ $t->typeLabel() }}</span><span class="sep"></span><span>{{ $t->methodLabel() }}</span>
+            @if ($t->goal && empty($hideGoal))<span class="badge badge-sm">{{ $t->goal->emoji }} {{ \Illuminate\Support\Str::limit($t->goal->name, 20) }}</span>@endif
+            @if (! empty($showUser) && $t->relationLoaded('user'))<span class="badge badge-sm badge-gray">{{ $t->user->emoji }} {{ $t->user->display_name }}</span>@endif
         </div>
     </div>
     <div class="tx-amt num {{ $cls === 'in' ? 'text-green' : ($cls === 'out' ? 'text-red' : '') }}">
         {{ $t->isInflow() ? '+' : '−' }}{{ ltrim(money($t->amount, $t->currency), '-') }}
-        @if ($t->currency === 'AUD')<span class="s">≈ {{ rupiah($t->amount_idr) }} · @ {{ rate_fmt($t->rate) }}</span>@endif
+        @if ($t->currency === 'AUD')<span class="s">≈ {{ rupiah($t->amount_idr) }} · kurs {{ rate_fmt($t->rate) }}</span>@endif
     </div>
     @if (! empty($actions) && $t->user_id === auth()->id())
         <div class="tx-actions">

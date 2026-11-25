@@ -22,10 +22,10 @@
             <h2>Tabungan kita, mimpi kita. 💗</h2>
             <p>Catat tabungan masing-masing, simpan Rupiah & AUD cash, dan kejar target bareng-bareng.</p>
             <div class="floaty">
-                <div>🇮🇩 Rupiah</div>
-                <div>🇦🇺 AUD cash</div>
-                <div>🎯 Target</div>
-                <div>💑 Berdua</div>
+                <div>Rupiah</div>
+                <div>AUD cash</div>
+                <div>Target</div>
+                <div>Berdua</div>
             </div>
         </div>
         <div class="small" style="opacity:.8">Dibuat dengan cinta · {{ date('Y') }}</div>
